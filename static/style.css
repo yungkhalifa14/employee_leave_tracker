@@ -414,3 +414,59 @@ tr:hover td {
     color: var(--danger);
     font-weight: bold;
 }
+
+.btn-secondary {
+    display: inline-block;
+    text-align: center;
+    background-color: var(--card-bg);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    padding: 10px 20px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+    color: var(--text-primary);
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.action-btns {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-edit,
+.btn-delete {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+}
+
+.btn-edit {
+    color: var(--accent);
+    background-color: rgba(88, 166, 255, 0.1);
+    border-color: rgba(88, 166, 255, 0.2);
+}
+
+.btn-edit:hover {
+    background-color: var(--accent);
+    color: white;
+}
+
+.btn-delete {
+    color: var(--danger);
+    background-color: rgba(218, 54, 51, 0.1);
+    border-color: rgba(218, 54, 51, 0.2);
+}
+
+.btn-delete:hover {
+    background-color: var(--danger);
+    color: white;
+}

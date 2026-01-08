@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h2>Edytuj Pracownika</h2>
+
+<div class="card single-card">
+    <form method="post">
+        <div class="form-group">
+            <label for="name">Imię i Nazwisko</label>
+            <input type="text" id="name" name="name" value="{{ employee[1] }}" required>
+        </div>
+        <div class="form-group">
+            <label for="leave_limit">Pula urlopowa (dni)</label>
+            <input type="number" id="leave_limit" name="leave_limit" value="{{ employee[2] }}" required>
+        </div>
+        <div class="form-row">
+            <button type="submit" class="btn-primary">Zapisz Zmiany</button>
+            <a href="{{ url_for('employees') }}" class="btn-secondary">Anuluj</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

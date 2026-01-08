@@ -125,6 +125,72 @@ class LeaveTracker:
             
         return days
 
+    def get_employee_by_id(self, employee_id):
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, name, leave_limit FROM employees WHERE id = ?', (employee_id,))
+        emp = cursor.fetchone()
+        conn.close()
+        return emp
+
+    def update_employee(self, employee_id, name, leave_limit):
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE employees SET name = ?, leave_limit = ? WHERE id = ?
+        ''', (name, leave_limit, employee_id))
+        conn.commit()
+        conn.close()
+
+    def delete_employee(self, employee_id):
+        conn = get_connection()
+        cursor = conn.cursor()
+        # Note: Leaves for this employee will remain but be orphaned or we should delete them too?
+        # Better UX: Delete leaves associated with employee
+        cursor.execute('DELETE FROM leaves WHERE employee_id = ?', (employee_id,))
+        cursor.execute('DELETE FROM employees WHERE id = ?', (employee_id,))
+        conn.commit()
+        conn.close()
+
+    def get_leave_by_id(self, leave_id):
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, employee_id, start_date, end_date, reason FROM leaves WHERE id = ?', (leave_id,))
+        leave = cursor.fetchone()
+        conn.close()
+        return leave
+
+    def update_leave(self, leave_id, employee_id, start_date, end_date, reason):
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            UPDATE leaves SET employee_id = ?, start_date = ?, end_date = ?, reason = ?
+            WHERE id = ?
+        ''', (employee_id, start_date, end_date, reason, leave_id))
+        conn.commit()
+        conn.close()
+
+    def delete_leave(self, leave_id):
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('DELETE FROM leaves WHERE id = ?', (leave_id,))
+        conn.commit()
+        conn.close()
+
+    def get_all_leaves(self):
+        """ Returns list of (id, emp_name, start_date, end_date, reason) """
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT l.id, e.name, l.start_date, l.end_date, l.reason 
+            FROM leaves l
+            JOIN employees e ON l.employee_id = e.id
+            ORDER BY l.start_date DESC
+        ''')
+        leaves = cursor.fetchall()
+        conn.close()
+        return leaves
+
     def get_employees_with_balance(self):
         """ Returns list of dicts: id, name, leave_limit, used_days, remaining_days """
         conn = get_connection()

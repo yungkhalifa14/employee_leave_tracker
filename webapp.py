@@ -140,6 +140,31 @@ def employees():
     all_emps = tracker.get_employees_with_balance()
     return render_template('employees.html', employees=all_emps)
 
+@app.route('/employees/edit/<int:emp_id>', methods=['GET', 'POST'])
+def edit_employee(emp_id):
+    emp = tracker.get_employee_by_id(emp_id)
+    if not emp:
+        flash("Pracownik nie znaleziony.", 'error')
+        return redirect(url_for('employees'))
+    
+    if request.method == 'POST':
+        name = request.form.get('name')
+        limit = request.form.get('leave_limit')
+        if name and limit:
+            tracker.update_employee(emp_id, name, int(limit))
+            flash(f"Dane pracownika {name} zostały zaktualizowane.", 'success')
+            return redirect(url_for('employees'))
+        else:
+            flash("Wszystkie pola są wymagane.", 'error')
+            
+    return render_template('edit_employee.html', employee=emp)
+
+@app.route('/employees/delete/<int:emp_id>', methods=['POST'])
+def delete_employee(emp_id):
+    tracker.delete_employee(emp_id)
+    flash("Pracownik został usunięty.", 'success')
+    return redirect(url_for('employees'))
+
 @app.route('/holidays', methods=['GET', 'POST'])
 def holidays():
     if request.method == 'POST':
@@ -182,7 +207,37 @@ def leaves():
         return redirect(url_for('leaves'))
     
     all_emps = tracker.get_all_employees()
-    return render_template('leaves.html', employees=all_emps)
+    all_leaves = tracker.get_all_leaves()
+    return render_template('leaves.html', employees=all_emps, leaves=all_leaves)
+
+@app.route('/leaves/edit/<int:leave_id>', methods=['GET', 'POST'])
+def edit_leave(leave_id):
+    leave = tracker.get_leave_by_id(leave_id)
+    if not leave:
+        flash("Urlop nie znaleziony.", 'error')
+        return redirect(url_for('leaves'))
+    
+    if request.method == 'POST':
+        emp_id = request.form.get('employee_id')
+        start = request.form.get('start_date')
+        end = request.form.get('end_date')
+        reason = request.form.get('reason')
+        
+        if emp_id and start and end and reason:
+            tracker.update_leave(leave_id, emp_id, start, end, reason)
+            flash("Wpis o urlopie został zaktualizowany.", 'success')
+            return redirect(url_for('leaves'))
+        else:
+            flash("Wszystkie pola są wymagane.", 'error')
+            
+    all_emps = tracker.get_all_employees()
+    return render_template('edit_leave.html', leave=leave, employees=all_emps)
+
+@app.route('/leaves/delete/<int:leave_id>', methods=['POST'])
+def delete_leave(leave_id):
+    tracker.delete_leave(leave_id)
+    flash("Wpis o urlopie został usunięty.", 'success')
+    return redirect(url_for('leaves'))
 
 @app.route('/shutdown')
 def shutdown():

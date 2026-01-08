@@ -1,0 +1,40 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h2>Edytuj Urlop</h2>
+
+<div class="card single-card">
+    <form method="post">
+        <div class="form-group">
+            <label for="employee_id">Pracownik</label>
+            <select id="employee_id" name="employee_id" required>
+                {% for emp_id, emp_name in employees %}
+                <option value="{{ emp_id }}" {% if emp_id==leave[1] %}selected{% endif %}>{{ emp_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="start_date">Data Rozpoczęcia</label>
+                <input type="date" id="start_date" name="start_date" value="{{ leave[2] }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="end_date">Data Zakończenia</label>
+                <input type="date" id="end_date" name="end_date" value="{{ leave[3] }}" required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="reason">Powód</label>
+            <input type="text" id="reason" name="reason" value="{{ leave[4] }}" required>
+        </div>
+
+        <div class="form-row">
+            <button type="submit" class="btn-primary">Zapisz Zmiany</button>
+            <a href="{{ url_for('leaves') }}" class="btn-secondary">Anuluj</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
