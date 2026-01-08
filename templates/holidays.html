@@ -1,26 +1,26 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<h2>Holidays</h2>
+<h2>Święta</h2>
 
 <div class="card-container">
     <div class="card add-form">
-        <h3>Add New Holiday</h3>
+        <h3>Dodaj Nowe Święto</h3>
         <form method="post">
             <div class="form-group">
-                <label for="date">Date</label>
+                <label for="date">Data</label>
                 <input type="date" id="date" name="date" required>
             </div>
             <div class="form-group">
-                <label for="name">Holiday Name</label>
-                <input type="text" id="name" name="name" required placeholder="e.g. New Year">
+                <label for="name">Nazwa Święta</label>
+                <input type="text" id="name" name="name" required placeholder="np. Nowy Rok">
             </div>
-            <button type="submit" class="btn-primary">Add Holiday</button>
+            <button type="submit" class="btn-primary">Dodaj Święto</button>
         </form>
     </div>
 
     <div class="card list-view">
-        <h3>Upcoming Holidays</h3>
+        <h3>Nadchodzące Święta</h3>
         <ul class="clean-list">
             {% for date, name in holidays %}
             <li>
@@ -28,7 +28,7 @@
                 {{ name }}
             </li>
             {% else %}
-            <p>No holidays recorded.</p>
+            <p>Brak zarejestrowanych świąt.</p>
             {% endfor %}
         </ul>
     </div>

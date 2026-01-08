@@ -28,7 +28,7 @@ def start_browser():
     try:
         log_path = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), 'app.log')
         with open(log_path, 'a') as f:
-            f.write(f"[{datetime.now()}] Attempting startup sequence for {url}\n")
+            f.write(f"[{datetime.now()}] Próba otwarcia przeglądarki dla {url}\n")
     except:
         pass
 
@@ -37,18 +37,18 @@ def start_browser():
         webbrowser.open(url)
     except Exception as e:
         try:
-            with open(log_path, 'a') as f: f.write(f"webbrowser error: {e}\n")
+            with open(log_path, 'a') as f: f.write(f"Błąd webbrowser: {e}\n")
         except: pass
 
     # Additional macOS explicit handling for notification
     if sys.platform == 'darwin':
         try:
             # Notification
-            script = f'display notification "App running at {url}" with title "Leave Tracker Started"'
+            script = f'display notification "Aplikacja działa pod adresem {url}" with title "Monitor Urlopów Uruchomiony"'
             subprocess.run(["osascript", "-e", script])
         except Exception as e:
             try:
-                with open(log_path, 'a') as f: f.write(f"subprocess error: {e}\n")
+                with open(log_path, 'a') as f: f.write(f"Błąd subprocess: {e}\n")
             except: pass
 
 template_folder = resource_path('templates')
@@ -60,6 +60,12 @@ app.secret_key = 'super_secret_key'  # Needed for flash messages
 tracker = LeaveTracker()
 # Ensure DB is ready
 init_db()
+
+POLISH_MONTHS = {
+    1: "Styczeń", 2: "Luty", 3: "Marzec", 4: "Kwiecień",
+    5: "Maj", 6: "Czerwiec", 7: "Lipiec", 8: "Sierpień",
+    9: "Wrzesień", 10: "Październik", 11: "Listopad", 12: "Grudzień"
+}
 
 @app.route('/')
 def dashboard():
@@ -79,9 +85,6 @@ def dashboard():
     events = tracker.get_monthly_data(start_date, end_date)
     
     # We need to construct the calendar grid
-    # Weeks list of lists where each day is (day_num, date_str, event_data)
-    # event_data = {'holiday': ..., 'absentees': ...} or None
-    
     cal = calendar.monthcalendar(year, month)
     calendar_data = []
     
@@ -113,7 +116,7 @@ def dashboard():
         prev_month = 12
         prev_year -= 1
         
-    month_name = calendar.month_name[month]
+    month_name = POLISH_MONTHS[month]
     
     return render_template('dashboard.html', 
                            calendar_data=calendar_data,
@@ -128,9 +131,9 @@ def employees():
         name = request.form.get('name')
         if name:
             tracker.add_employee(name)
-            flash(f"Employee {name} added.", 'success')
+            flash(f"Pracownik {name} został dodany.", 'success')
         else:
-            flash("Name required.", 'error')
+            flash("Imię jest wymagane.", 'error')
         return redirect(url_for('employees'))
     
     # Use new method to get balance info
@@ -144,9 +147,9 @@ def holidays():
         date = request.form.get('date')
         if name and date:
             tracker.add_holiday(date, name)
-            flash(f"Holiday '{name}' on {date} added.", 'success')
+            flash(f"Święto '{name}' ({date}) zostało dodane.", 'success')
         else:
-            flash("Both Name and Date are required.", 'error')
+            flash("Nazwa i data są wymagane.", 'error')
         return redirect(url_for('holidays'))
         
     # We don't have a get_all_holidays method in tracker yet.
@@ -181,15 +184,23 @@ def leaves():
     all_emps = tracker.get_all_employees()
     return render_template('leaves.html', employees=all_emps)
 
-@app.route('/shutdown')
-def shutdown():
-    """ Gracefully shut down the server """
-    def delayed_shutdown():
-        time.sleep(1)
-        os._exit(0)
+@app.route('/leaves', methods=['GET', 'POST'])
+def leaves():
+    if request.method == 'POST':
+        emp_id = request.form.get('employee_id')
+        start = request.form.get('start_date')
+        end = request.form.get('end_date')
+        reason = request.form.get('reason')
         
-    threading.Thread(target=delayed_shutdown).start()
-    return "Server shutting down... You can close this window."
+        if emp_id and start and end and reason:
+            tracker.add_leave(emp_id, start, end, reason)
+            flash("Urlop został zarezerwowany.", 'success')
+        else:
+            flash("Wszystkie pola są wymagane.", 'error')
+        return redirect(url_for('leaves'))
+    
+    all_emps = tracker.get_all_employees()
+    return render_template('leaves.html', employees=all_emps)
 
 if __name__ == '__main__':
     try:
