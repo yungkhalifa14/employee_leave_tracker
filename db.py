@@ -44,6 +44,14 @@ def init_db():
     ''')
     
     conn.commit()
+    
+    # Auto-migration: check if leave_limit column exists
+    cursor.execute("PRAGMA table_info(employees)")
+    columns = [info[1] for info in cursor.fetchall()]
+    if 'leave_limit' not in columns:
+        cursor.execute("ALTER TABLE employees ADD COLUMN leave_limit INTEGER DEFAULT 26")
+        conn.commit()
+    
     conn.close()
 
 if __name__ == '__main__':
