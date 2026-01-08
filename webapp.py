@@ -176,24 +176,6 @@ def leaves():
         
         if emp_id and start and end and reason:
             tracker.add_leave(emp_id, start, end, reason)
-            flash("Leave booked successfully.", 'success')
-        else:
-            flash("All fields are required.", 'error')
-        return redirect(url_for('leaves'))
-    
-    all_emps = tracker.get_all_employees()
-    return render_template('leaves.html', employees=all_emps)
-
-@app.route('/leaves', methods=['GET', 'POST'])
-def leaves():
-    if request.method == 'POST':
-        emp_id = request.form.get('employee_id')
-        start = request.form.get('start_date')
-        end = request.form.get('end_date')
-        reason = request.form.get('reason')
-        
-        if emp_id and start and end and reason:
-            tracker.add_leave(emp_id, start, end, reason)
             flash("Urlop został zarezerwowany.", 'success')
         else:
             flash("Wszystkie pola są wymagane.", 'error')
@@ -201,6 +183,16 @@ def leaves():
     
     all_emps = tracker.get_all_employees()
     return render_template('leaves.html', employees=all_emps)
+
+@app.route('/shutdown')
+def shutdown():
+    """ Gracefully shut down the server """
+    def delayed_shutdown():
+        time.sleep(1)
+        os._exit(0)
+        
+    threading.Thread(target=delayed_shutdown).start()
+    return "Serwer jest wyłączany... Możesz zamknąć to okno."
 
 if __name__ == '__main__':
     try:

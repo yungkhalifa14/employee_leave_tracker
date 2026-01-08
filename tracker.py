@@ -16,7 +16,7 @@ class LeaveTracker:
         conn = get_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute('INSERT INTO holidays (date, name) VALUES (?, ?)', (date_str, name))
+            cursor.execute('INSERT OR REPLACE INTO holidays (date, name) VALUES (?, ?)', (date_str, name))
             conn.commit()
         except Exception as e:
             print(f"Error adding holiday: {e}")
