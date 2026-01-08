@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leave Tracker</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div class="sidebar">
+        <h1>LeaveTracker</h1>
+        <nav>
+            <a href="{{ url_for('dashboard') }}">Dashboard</a>
+            <a href="{{ url_for('employees') }}">Employees</a>
+            <a href="{{ url_for('holidays') }}">Holidays</a>
+            <a href="{{ url_for('leaves') }}">Leaves</a>
+            <a href="{{ url_for('shutdown') }}" class="quit-btn"
+                onclick="return confirm('Are you sure you want to quit the app?');">Quit App</a>
+        </nav>
+    </div>
+    <div class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flashes">
+            {% for category, message in messages %}
+            <div class="alert {{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+</body>
+
+</html>

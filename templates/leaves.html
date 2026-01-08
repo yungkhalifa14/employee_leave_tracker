@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h2>Book Leave</h2>
+
+<div class="card single-card">
+    <form method="post">
+        <div class="form-group">
+            <label for="employee_id">Employee</label>
+            <select id="employee_id" name="employee_id" required>
+                <option value="" disabled selected>Select an employee...</option>
+                {% for id, name in employees %}
+                <option value="{{ id }}">{{ name }} (ID: {{ id }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="start_date">Start Date</label>
+                <input type="date" id="start_date" name="start_date" required>
+            </div>
+
+            <div class="form-group">
+                <label for="end_date">End Date</label>
+                <input type="date" id="end_date" name="end_date" required>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="reason">Reason</label>
+            <input type="text" id="reason" name="reason" placeholder="e.g. Vacation, Sick Leave" required>
+        </div>
+
+        <button type="submit" class="btn-primary">Book Leave</button>
+    </form>
+</div>
+{% endblock %}

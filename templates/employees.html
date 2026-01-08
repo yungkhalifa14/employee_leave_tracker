@@ -1,0 +1,49 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<h2>Employees</h2>
+
+<div class="card-container">
+    <div class="card add-form">
+        <h3>Add New Employee</h3>
+        <form method="post">
+            <div class="form-group">
+                <label for="name">Employee Name</label>
+                <input type="text" id="name" name="name" required placeholder="e.g. John Doe">
+            </div>
+            <button type="submit" class="btn-primary">Add Employee</button>
+        </form>
+    </div>
+
+    <div class="card list-view">
+        <h3>Employee List</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Allowance</th>
+                    <th>Used</th>
+                    <th>Left</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for emp in employees %}
+                <tr>
+                    <td>{{ emp.id }}</td>
+                    <td>{{ emp.name }}</td>
+                    <td>{{ emp.leave_limit }}</td>
+                    <td>{{ emp.used_days }}</td>
+                    <td class="{% if emp.remaining_days < 0 %}negative{% endif %}">{{ emp.remaining_days }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5">No employees found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+```

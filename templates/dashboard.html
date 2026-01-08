@@ -1,0 +1,59 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="dashboard-header">
+    <div class="calendar-nav">
+        <a href="{{ url_for('dashboard', year=prev_year, month=prev_month) }}" class="nav-btn">&larr; Prev</a>
+        <h2>{{ month_name }} {{ year }}</h2>
+        <a href="{{ url_for('dashboard', year=next_year, month=next_month) }}" class="nav-btn">Next &rarr;</a>
+    </div>
+</div>
+
+<div class="calendar-container">
+    <div class="weekdays">
+        <div>Mon</div>
+        <div>Tue</div>
+        <div>Wed</div>
+        <div>Thu</div>
+        <div>Fri</div>
+        <div>Sat</div>
+        <div>Sun</div>
+    </div>
+
+    {% for week in calendar_data %}
+    <div class="week">
+        {% for day_data in week %}
+        {% if day_data %}
+        {% set has_holiday = day_data.events and day_data.events.holiday %}
+        {% set has_leaves = day_data.events and day_data.events.absentees|length > 0 %}
+
+        <div class="day {% if has_holiday %}holiday{% elif has_leaves %}leave{% endif %}">
+            <span class="day-num">{{ day_data.day }}</span>
+
+            {% if has_holiday %}
+            <div class="event-marker holiday-marker">{{ day_data.events.holiday }}</div>
+            <div class="tooltip">
+                <strong>Holiday:</strong> {{ day_data.events.holiday }}
+            </div>
+            {% endif %}
+
+            {% if has_leaves %}
+            <div class="event-marker leave-marker">{{ day_data.events.absentees|length }} Absent</div>
+            <div class="tooltip">
+                <strong>Absent:</strong>
+                <ul>
+                    {% for absentee in day_data.events.absentees %}
+                    <li>{{ absentee.name }}: {{ absentee.reason }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="day empty"></div>
+        {% endif %}
+        {% endfor %}
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

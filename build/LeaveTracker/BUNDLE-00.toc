@@ -1,0 +1,3 @@
+([('LeaveTracker',
+   '/Users/maksrogala/employee_leave_tracker/dist/LeaveTracker',
+   'EXECUTABLE')],)
