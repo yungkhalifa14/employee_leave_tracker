@@ -1,7 +1,10 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, make_response
+import csv
+import io
+import calendar
 from tracker import LeaveTracker
 from db import init_db
-from datetime import datetime
+from datetime import datetime, timedelta
 import sys
 import os
 import webbrowser
@@ -67,15 +70,10 @@ POLISH_MONTHS = {
     9: "Wrzesień", 10: "Październik", 11: "Listopad", 12: "Grudzień"
 }
 
-@app.route('/')
-def dashboard():
-    # Month navigation
-    today = datetime.now()
-    year = int(request.args.get('year', today.year))
-    month = int(request.args.get('month', today.month))
-    
+
+
+def get_calendar_context(year, month):
     # Calculate start and end of month
-    import calendar
     _, last_day = calendar.monthrange(year, month)
     
     start_date = f"{year}-{month:02d}-01"
@@ -116,14 +114,76 @@ def dashboard():
         prev_month = 12
         prev_year -= 1
         
-    month_name = POLISH_MONTHS[month]
+    return {
+        'calendar_data': calendar_data,
+        'month_name': POLISH_MONTHS[month],
+        'year': year,
+        'prev_month': prev_month,
+        'prev_year': prev_year,
+        'next_month': next_month,
+        'next_year': next_year
+    }
+
+@app.route('/')
+def dashboard():
+    today = datetime.now()
+    year = int(request.args.get('year', today.year))
+    month = int(request.args.get('month', today.month))
     
-    return render_template('dashboard.html', 
-                           calendar_data=calendar_data,
-                           month_name=month_name,
-                           year=year,
-                           prev_month=prev_month, prev_year=prev_year,
-                           next_month=next_month, next_year=next_year)
+    context = get_calendar_context(year, month)
+    return render_template('dashboard.html', **context, public_mode=False, endpoint='dashboard')
+
+@app.route('/public')
+def public_calendar():
+    today = datetime.now()
+    year = int(request.args.get('year', today.year))
+    month = int(request.args.get('month', today.month))
+    
+    context = get_calendar_context(year, month)
+    return render_template('dashboard.html', **context, public_mode=True, endpoint='public_calendar')
+
+@app.route('/export_csv')
+def export_csv():
+    today = datetime.now()
+    year = int(request.args.get('year', today.year))
+    month = int(request.args.get('month', today.month))
+    
+    # Use helper to reuse logic? Actually helper returns UI structure.
+    # We need raw data. Let's use get_monthly_data.
+    
+    _, last_day = calendar.monthrange(year, month)
+    start_date = f"{year}-{month:02d}-01"
+    end_date = f"{year}-{month:02d}-{last_day:02d}"
+    
+    # Get raw data
+    data = tracker.get_monthly_data(start_date, end_date)
+    
+    # Prepare CSV
+    si = io.StringIO()
+    cw = csv.writer(si)
+    cw.writerow(['Date', 'Type', 'Details'])
+    
+    # Iterate all days in month
+    curr = datetime.strptime(start_date, "%Y-%m-%d")
+    end = datetime.strptime(end_date, "%Y-%m-%d")
+    
+    while curr <= end:
+        d_str = curr.strftime("%Y-%m-%d")
+        day_data = data.get(d_str)
+        
+        if day_data:
+            if day_data.get('holiday'):
+                cw.writerow([d_str, 'Holiday', day_data['holiday']])
+            
+            for absentee in day_data.get('absentees', []):
+                cw.writerow([d_str, 'Leave', f"{absentee['name']}: {absentee['reason']}"])
+        
+        curr += timedelta(days=1)
+        
+    output = make_response(si.getvalue())
+    output.headers["Content-Disposition"] = f"attachment; filename=calendar_{year}_{month:02d}.csv"
+    output.headers["Content-type"] = "text/csv"
+    return output
 
 @app.route('/employees', methods=['GET', 'POST'])
 def employees():
@@ -250,9 +310,10 @@ def shutdown():
     return "Serwer jest wyłączany... Możesz zamknąć to okno."
 
 if __name__ == '__main__':
+
     try:
         threading.Thread(target=start_browser, daemon=True).start()
-        app.run(debug=False, port=5001)
+        app.run(host='0.0.0.0', debug=False, port=5001)
     except Exception as e:
         try:
             log_path = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), 'app.log')
