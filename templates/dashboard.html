@@ -3,9 +3,9 @@
 {% block content %}
 <div class="dashboard-header">
     <div class="calendar-nav">
-        <a href="{{ url_for('dashboard', year=prev_year, month=prev_month) }}" class="nav-btn">&larr; Poprzedni</a>
+        <a href="{{ url_for(endpoint, year=prev_year, month=prev_month) }}" class="nav-btn">&larr; Poprzedni</a>
         <h2>{{ month_name }} {{ year }}</h2>
-        <a href="{{ url_for('dashboard', year=next_year, month=next_month) }}" class="nav-btn">Następny &rarr;</a>
+        <a href="{{ url_for(endpoint, year=next_year, month=next_month) }}" class="nav-btn">Następny &rarr;</a>
     </div>
 </div>
 

@@ -7,9 +7,13 @@
     <title>Monitor Urlopów</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    {% if public_mode %}
+    <meta http-equiv="refresh" content="60">
+    {% endif %}
 </head>
 
 <body>
+    {% if not public_mode %}
     <div class="sidebar">
         <h1>Monitor Urlopów</h1>
         <nav>
@@ -21,6 +25,7 @@
                 onclick="return confirm('Czy na pewno chcesz zamknąć aplikację?');">Zamknij Aplikację</a>
         </nav>
     </div>
+    {% endif %}
     <div class="main-content">
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}

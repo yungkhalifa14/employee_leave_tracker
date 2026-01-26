@@ -67,13 +67,9 @@ POLISH_MONTHS = {
     9: "Wrzesień", 10: "Październik", 11: "Listopad", 12: "Grudzień"
 }
 
-@app.route('/')
-def dashboard():
-    # Month navigation
-    today = datetime.now()
-    year = int(request.args.get('year', today.year))
-    month = int(request.args.get('month', today.month))
-    
+
+
+def get_calendar_context(year, month):
     # Calculate start and end of month
     import calendar
     _, last_day = calendar.monthrange(year, month)
@@ -116,14 +112,33 @@ def dashboard():
         prev_month = 12
         prev_year -= 1
         
-    month_name = POLISH_MONTHS[month]
+    return {
+        'calendar_data': calendar_data,
+        'month_name': POLISH_MONTHS[month],
+        'year': year,
+        'prev_month': prev_month,
+        'prev_year': prev_year,
+        'next_month': next_month,
+        'next_year': next_year
+    }
+
+@app.route('/')
+def dashboard():
+    today = datetime.now()
+    year = int(request.args.get('year', today.year))
+    month = int(request.args.get('month', today.month))
     
-    return render_template('dashboard.html', 
-                           calendar_data=calendar_data,
-                           month_name=month_name,
-                           year=year,
-                           prev_month=prev_month, prev_year=prev_year,
-                           next_month=next_month, next_year=next_year)
+    context = get_calendar_context(year, month)
+    return render_template('dashboard.html', **context, public_mode=False, endpoint='dashboard')
+
+@app.route('/public')
+def public_calendar():
+    today = datetime.now()
+    year = int(request.args.get('year', today.year))
+    month = int(request.args.get('month', today.month))
+    
+    context = get_calendar_context(year, month)
+    return render_template('dashboard.html', **context, public_mode=True, endpoint='public_calendar')
 
 @app.route('/employees', methods=['GET', 'POST'])
 def employees():
@@ -252,7 +267,7 @@ def shutdown():
 if __name__ == '__main__':
     try:
         threading.Thread(target=start_browser, daemon=True).start()
-        app.run(debug=False, port=5001)
+        app.run(host='0.0.0.0', debug=False, port=5001)
     except Exception as e:
         try:
             log_path = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), 'app.log')
