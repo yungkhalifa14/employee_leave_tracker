@@ -71,7 +71,18 @@ POLISH_MONTHS = {
 }
 
 
-
+def get_safe_year_month():
+    today = datetime.now()
+    try:
+        year = int(request.args.get('year', today.year))
+    except (ValueError, TypeError):
+        year = today.year
+        
+    try:
+        month = int(request.args.get('month', today.month))
+    except (ValueError, TypeError):
+        month = today.month
+    return year, month
 def get_calendar_context(year, month):
     # Calculate start and end of month
     _, last_day = calendar.monthrange(year, month)
@@ -117,6 +128,7 @@ def get_calendar_context(year, month):
     return {
         'calendar_data': calendar_data,
         'month_name': POLISH_MONTHS[month],
+        'month': month,
         'year': year,
         'prev_month': prev_month,
         'prev_year': prev_year,
@@ -126,27 +138,21 @@ def get_calendar_context(year, month):
 
 @app.route('/')
 def dashboard():
-    today = datetime.now()
-    year = int(request.args.get('year', today.year))
-    month = int(request.args.get('month', today.month))
+    year, month = get_safe_year_month()
     
     context = get_calendar_context(year, month)
     return render_template('dashboard.html', **context, public_mode=False, endpoint='dashboard')
 
 @app.route('/public')
 def public_calendar():
-    today = datetime.now()
-    year = int(request.args.get('year', today.year))
-    month = int(request.args.get('month', today.month))
+    year, month = get_safe_year_month()
     
     context = get_calendar_context(year, month)
     return render_template('dashboard.html', **context, public_mode=True, endpoint='public_calendar')
 
 @app.route('/export_csv')
 def export_csv():
-    today = datetime.now()
-    year = int(request.args.get('year', today.year))
-    month = int(request.args.get('month', today.month))
+    year, month = get_safe_year_month()
     
     # Use helper to reuse logic? Actually helper returns UI structure.
     # We need raw data. Let's use get_monthly_data.
