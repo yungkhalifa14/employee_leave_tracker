@@ -2,59 +2,158 @@
 
 {% block content %}
 <div class="dashboard-header">
+    <div>
+        <h2>Zestawienie Miesięczne</h2>
+        <p style="color: var(--text-secondary);">Podgląd kalendarza urlopowego i świąt</p>
+    </div>
+    
     <div class="calendar-nav">
-        <a href="{{ url_for(endpoint, year=prev_year, month=prev_month) }}" class="nav-btn">&larr; Poprzedni</a>
-        <h2>{{ month_name }} {{ year }}</h2>
-        <a href="{{ url_for(endpoint, year=next_year, month=next_month) }}" class="nav-btn">Następny &rarr;</a>
-        <a href="{{ url_for('export_csv', year=year, month=month) }}" class="nav-btn export-btn">Eksportuj CSV</a>
+        <a href="{{ url_for(endpoint, year=prev_year, month=prev_month, team_id=current_team_filter) }}" class="nav-btn">&laquo; Poprzedni</a>
+        <h3 style="margin: 0; min-width: 150px; text-align: center;">{{ month_name }} {{ year }}</h3>
+        <a href="{{ url_for(endpoint, year=next_year, month=next_month, team_id=current_team_filter) }}" class="nav-btn">Następny &raquo;</a>
     </div>
 </div>
 
+{% if not public_mode and teams %}
+<div class="filter-bar">
+    <span style="font-weight: 500; color: var(--text-secondary);">Filtruj według zespołu:</span>
+    <form method="GET" action="{{ url_for('dashboard') }}">
+        <input type="hidden" name="year" value="{{ year }}">
+        <input type="hidden" name="month" value="{{ month }}">
+        <select name="team_id" onchange="this.form.submit()">
+            <option value="">Wszystkie Zespoły</option>
+            {% for t in teams %}
+            <option value="{{ t[0] }}" {% if current_team_filter == t[0] %}selected{% endif %}>{{ t[1] }}</option>
+            {% endfor %}
+        </select>
+    </form>
+</div>
+{% endif %}
+
 <div class="calendar-container">
     <div class="weekdays">
-        <div>Pon</div>
-        <div>Wt</div>
-        <div>Śr</div>
-        <div>Czw</div>
-        <div>Pt</div>
-        <div>Sob</div>
-        <div>Niedz</div>
+        <div>Poniedziałek</div>
+        <div>Wtorek</div>
+        <div>Środa</div>
+        <div>Czwartek</div>
+        <div>Piątek</div>
+        <div>Sobota</div>
+        <div>Niedziela</div>
     </div>
-
+    
     {% for week in calendar_data %}
     <div class="week">
         {% for day_data in week %}
-        {% if day_data %}
-        {% set has_holiday = day_data.events and day_data.events.holiday %}
-        {% set has_leaves = day_data.events and day_data.events.absentees|length > 0 %}
-
-        <div class="day {% if has_holiday %}holiday{% elif has_leaves %}leave{% endif %}">
-            <span class="day-num">{{ day_data.day }}</span>
-
-            {% if has_holiday %}
-            <div class="event-marker holiday-marker">{{ day_data.events.holiday }}</div>
-            <div class="tooltip">
-                <strong>Święto:</strong> {{ day_data.events.holiday }}
-            </div>
+            {% if day_data == None %}
+                <div class="day empty"></div>
+            {% else %}
+                <div class="day">
+                    <span class="day-num">{{ day_data.day }}</span>
+                    
+                    {% if day_data.events %}
+                        {% if day_data.events.holiday %}
+                            <div class="event-marker holiday-marker" title="Święto: {{ day_data.events.holiday }}">
+                                🌴 {{ day_data.events.holiday }}
+                            </div>
+                        {% endif %}
+                        
+                        {% for absentee in day_data.events.absentees %}
+                            {% if absentee.status == 'pending' %}
+                                {% if current_user.role == 'admin' %}
+                                <div class="event-marker pending-marker clickable" 
+                                     onclick='openApprovalModal({{ absentee.id }}, {{ absentee.name | tojson | safe }}, {{ absentee.reason | tojson | safe }})'
+                                     title="Wniosek oczekujący - Kliknij aby rozpatrzyć">
+                                    ⏳ {{ absentee.name }}
+                                </div>
+                                {% else %}
+                                <div class="event-marker pending-marker" title="Oczekujący: {{ absentee.name }} - {{ absentee.reason }}">
+                                    ⏳ {{ absentee.name }}
+                                </div>
+                                {% endif %}
+                            {% else %}
+                            <div class="event-marker leave-marker" title="{{ absentee.name }} - {{ absentee.reason }}">
+                                👤 {{ absentee.name }}
+                            </div>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+                </div>
             {% endif %}
-
-            {% if has_leaves %}
-            <div class="event-marker leave-marker">{{ day_data.events.absentees|length }} Nieobecnych</div>
-            <div class="tooltip">
-                <strong>Nieobecni:</strong>
-                <ul>
-                    {% for absentee in day_data.events.absentees %}
-                    <li>{{ absentee.name }}: {{ absentee.reason }}</li>
-                    {% endfor %}
-                </ul>
-            </div>
-            {% endif %}
-        </div>
-        {% else %}
-        <div class="day empty"></div>
-        {% endif %}
         {% endfor %}
     </div>
     {% endfor %}
 </div>
+
+{% if not public_mode %}
+<div style="margin-top: 32px; display: flex; justify-content: flex-end;">
+    <a href="{{ url_for('export_csv', year=year, month=month) }}" class="btn btn-secondary" style="width: auto;">
+        <svg style="width:16px; height:16px; margin-right:8px; display:inline;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Pobierz CSV Miesiąca
+    </a>
+</div>
+{% endif %}
+<!-- Leave Approval Modal -->
+<div id="approvalModal" class="modal-overlay">
+    <div class="modal-content">
+        <div class="modal-header">
+            Rozpatrz Wniosek Urlopowy
+        </div>
+        <div class="modal-body">
+            <p><strong>Pracownik:</strong> <span id="modalEmpName"></span></p>
+            <p><strong>Rodzaj/Uwagi:</strong> <span id="modalEmpReason"></span></p>
+            
+            <form id="declineForm" method="POST" style="margin-top: 20px;">
+                <div class="form-group">
+                    <label for="manager_comment">Komentarz / Uzasadnienie (wymagane przy odrzuceniu)</label>
+                    <textarea id="manager_comment" name="manager_comment" rows="3" placeholder="Wpisz uzasadnienie..."></textarea>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" style="width: auto;" onclick="closeModal()">Anuluj</button>
+            <form id="approveForm" method="POST" style="margin: 0;">
+                <button type="submit" class="btn btn-success" style="width: auto;">Akceptuj</button>
+            </form>
+            <button class="btn btn-primary" style="background: var(--danger); width: auto;" onclick="submitDecline()">Odrzuć</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const modal = document.getElementById('approvalModal');
+    const approveForm = document.getElementById('approveForm');
+    const declineForm = document.getElementById('declineForm');
+    
+    function openApprovalModal(leaveId, empName, reason) {
+        document.getElementById('modalEmpName').textContent = empName;
+        document.getElementById('modalEmpReason').textContent = reason;
+        
+        // Set form actions
+        approveForm.action = "/leave/approve/" + leaveId;
+        declineForm.action = "/leave/decline/" + leaveId;
+        
+        modal.classList.add('active');
+    }
+    
+    function closeModal() {
+        modal.classList.remove('active');
+        document.getElementById('manager_comment').value = '';
+    }
+    
+    function submitDecline() {
+        const comment = document.getElementById('manager_comment').value.trim();
+        if (!comment) {
+            alert('Wprowadź uzasadnienie odrzucenia wniosku!');
+            return;
+        }
+        declineForm.submit();
+    }
+    
+    // Close modal if clicked outside
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+</script>
 {% endblock %}

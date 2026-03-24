@@ -1,15 +1,59 @@
 from db import get_connection
 from datetime import datetime
+import secrets
 
 class LeaveTracker:
-    def add_employee(self, name):
+    def add_employee(self, name, leave_limit=26, username=None, password_hash=None, role='user', team_id=None):
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute('INSERT INTO employees (name) VALUES (?)', (name,))
-        emp_id = cursor.lastrowid
-        conn.commit()
+        invite_token = None
+        if not username and not password_hash:
+            invite_token = secrets.token_urlsafe(16)
+        try:
+            cursor.execute('''
+                INSERT INTO employees (name, leave_limit, username, password_hash, role, team_id, invite_token) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (name, leave_limit, username, password_hash, role, team_id, invite_token))
+            emp_id = cursor.lastrowid
+            conn.commit()
+            return invite_token if invite_token else emp_id
+        except Exception:
+            conn.rollback()
+            return False
+        finally:
+            conn.close()
+
+    def get_employee_by_token(self, token):
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM employees WHERE invite_token = ?', (token,))
+        emp = cursor.fetchone()
         conn.close()
-        return emp_id
+        return emp
+
+    def claim_invite(self, token, username, password_hash):
+        conn = get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("UPDATE employees SET username = ?, password_hash = ?, invite_token = NULL WHERE invite_token = ?",
+                          (username, password_hash, token))
+            conn.commit()
+            return cursor.rowcount > 0
+        except sqlite3.IntegrityError:
+            return False
+        finally:
+            conn.close()
+
+    def get_user_by_username(self, username):
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT id, name, leave_limit, username, password_hash, role, team_id 
+            FROM employees WHERE username = ?
+        ''', (username,))
+        user = cursor.fetchone()
+        conn.close()
+        return user
 
     def add_holiday(self, date_str, name):
         # date_str expected format: YYYY-MM-DD
@@ -23,13 +67,13 @@ class LeaveTracker:
         finally:
             conn.close()
 
-    def add_leave(self, employee_id, start_date, end_date, reason):
+    def add_leave(self, employee_id, start_date, end_date, reason, status='pending'):
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute('''
-            INSERT INTO leaves (employee_id, start_date, end_date, reason)
-            VALUES (?, ?, ?, ?)
-        ''', (employee_id, start_date, end_date, reason))
+            INSERT INTO leaves (employee_id, start_date, end_date, reason, status)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (employee_id, start_date, end_date, reason, status))
         leave_id = cursor.lastrowid
         conn.commit()
         conn.close()
@@ -128,17 +172,20 @@ class LeaveTracker:
     def get_employee_by_id(self, employee_id):
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT id, name, leave_limit FROM employees WHERE id = ?', (employee_id,))
+        cursor.execute('''
+            SELECT id, name, leave_limit, username, password_hash, role, team_id 
+            FROM employees WHERE id = ?
+        ''', (employee_id,))
         emp = cursor.fetchone()
         conn.close()
         return emp
 
-    def update_employee(self, employee_id, name, leave_limit):
+    def update_employee(self, employee_id, name, leave_limit, team_id=None):
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute('''
-            UPDATE employees SET name = ?, leave_limit = ? WHERE id = ?
-        ''', (name, leave_limit, employee_id))
+            UPDATE employees SET name = ?, leave_limit = ?, team_id = ? WHERE id = ?
+        ''', (name, leave_limit, team_id, employee_id))
         conn.commit()
         conn.close()
 
@@ -155,7 +202,7 @@ class LeaveTracker:
     def get_leave_by_id(self, leave_id):
         conn = get_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT id, employee_id, start_date, end_date, reason FROM leaves WHERE id = ?', (leave_id,))
+        cursor.execute('SELECT id, employee_id, start_date, end_date, reason, status, manager_comment FROM leaves WHERE id = ?', (leave_id,))
         leave = cursor.fetchone()
         conn.close()
         return leave
@@ -178,11 +225,11 @@ class LeaveTracker:
         conn.close()
 
     def get_all_leaves(self):
-        """ Returns list of (id, emp_name, start_date, end_date, reason) """
+        """ Returns list of (id, emp_name, start_date, end_date, reason, status, manager_comment) """
         conn = get_connection()
         cursor = conn.cursor()
         cursor.execute('''
-            SELECT l.id, e.name, l.start_date, l.end_date, l.reason 
+            SELECT l.id, e.name, l.start_date, l.end_date, l.reason, l.status, l.manager_comment
             FROM leaves l
             JOIN employees e ON l.employee_id = e.id
             ORDER BY l.start_date DESC
@@ -191,13 +238,59 @@ class LeaveTracker:
         conn.close()
         return leaves
 
-    def get_employees_with_balance(self):
-        """ Returns list of dicts: id, name, leave_limit, used_days, remaining_days """
+    def approve_leave(self, leave_id):
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE leaves SET status = 'approved', manager_comment = NULL WHERE id = ?", (leave_id,))
+        conn.commit()
+        conn.close()
+
+    def decline_leave(self, leave_id, comment):
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE leaves SET status = 'declined', manager_comment = ? WHERE id = ?", (comment, leave_id))
+        conn.commit()
+        conn.close()
+
+    def get_pending_leaves(self, team_id=None):
+        """ Returns list of pending requests optionally filtered by team_id """
+        conn = get_connection()
+        cursor = conn.cursor()
+        
+        query = '''
+            SELECT l.id, e.name, l.start_date, l.end_date, l.reason 
+            FROM leaves l
+            JOIN employees e ON l.employee_id = e.id
+            WHERE l.status = 'pending'
+        '''
+        params = []
+        if team_id:
+            query += " AND e.team_id = ?"
+            params.append(team_id)
+            
+        query += " ORDER BY l.start_date ASC"
+        cursor.execute(query, tuple(params))
+        leaves = cursor.fetchall()
+        conn.close()
+        return leaves
+
+    def get_employees_with_balance(self, manager_id=None):
+        """ Returns list of dicts: id, name, leave_limit, used_days, remaining_days, invite_token """
         conn = get_connection()
         cursor = conn.cursor()
         
         # Get all employees
-        cursor.execute('SELECT id, name, leave_limit FROM employees')
+        query = '''
+            SELECT e.id, e.name, e.leave_limit, t.name, e.invite_token
+            FROM employees e
+            LEFT JOIN teams t ON e.team_id = t.id
+        '''
+        params = []
+        if manager_id:
+            query += " WHERE t.owner_id = ?"
+            params.append(manager_id)
+            
+        cursor.execute(query, tuple(params))
         employees = cursor.fetchall()
         
         # Get all leaves for the current year (simplified logic: get all and filter in python or sql)
@@ -220,7 +313,7 @@ class LeaveTracker:
         for emp_id, start, end in all_leaves:
             emp_leaves[emp_id].append((start, end))
             
-        for emp_id, name, limit in employees:
+        for emp_id, name, limit, team_name, invite_token in employees:
             if limit is None: limit = 26 # Fallback if migration missed or new emp
             
             used = 0
@@ -235,9 +328,11 @@ class LeaveTracker:
             result.append({
                 'id': emp_id,
                 'name': name,
+                'team': team_name or 'Brak zespołu',
                 'leave_limit': limit,
                 'used_days': used,
-                'remaining_days': remaining
+                'remaining_days': remaining,
+                'invite_token': invite_token
             })
             
         return result
@@ -260,13 +355,13 @@ class LeaveTracker:
             data[date]['holiday'] = name
 
         # Get Leaves
-        # Logic: find leaves that OVERLAP with the requested range
+        # Logic: find leaves that OVERLAP with the requested range and aren't declined
         # l.start_date <= end_date AND l.end_date >= start_date
         cursor.execute('''
-            SELECT l.start_date, l.end_date, e.name, l.reason 
+            SELECT l.id, l.start_date, l.end_date, e.name, l.reason, l.status 
             FROM leaves l
             JOIN employees e ON l.employee_id = e.id
-            WHERE l.start_date <= ? AND l.end_date >= ?
+            WHERE l.start_date <= ? AND l.end_date >= ? AND l.status != 'declined'
         ''', (end_date, start_date))
         
         leaves = cursor.fetchall()
@@ -280,7 +375,7 @@ class LeaveTracker:
         range_start = datetime.strptime(start_date, fmt)
         range_end = datetime.strptime(end_date, fmt)
 
-        for l_start, l_end, emp_name, reason in leaves:
+        for l_id, l_start, l_end, emp_name, reason, status in leaves:
             s = datetime.strptime(l_start, fmt)
             e = datetime.strptime(l_end, fmt)
             
@@ -291,7 +386,44 @@ class LeaveTracker:
             while curr <= end:
                 d_str = curr.strftime(fmt)
                 if d_str not in data: data[d_str] = {'holiday': None, 'absentees': []}
-                data[d_str]['absentees'].append({'name': emp_name, 'reason': reason})
+                data[d_str]['absentees'].append({
+                    'id': l_id,
+                    'name': emp_name, 
+                    'reason': reason,
+                    'status': status
+                })
                 curr += timedelta(days=1)
                 
         return data
+
+    def get_all_teams(self, owner_id=None):
+        conn = get_connection()
+        cursor = conn.cursor()
+        if owner_id:
+            cursor.execute('SELECT id, name FROM teams WHERE owner_id = ? ORDER BY name', (owner_id,))
+        else:
+            cursor.execute('SELECT id, name FROM teams ORDER BY name')
+        teams = cursor.fetchall()
+        conn.close()
+        return teams
+
+    def add_team(self, name, owner_id=None):
+        conn = get_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute('INSERT INTO teams (name, owner_id) VALUES (?, ?)', (name, owner_id))
+            team_id = cursor.lastrowid
+            conn.commit()
+            return team_id
+        except Exception:
+            return None
+        finally:
+            conn.close()
+
+    def get_employees_by_team(self, team_id):
+        conn = get_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT id, name FROM employees WHERE team_id = ? OR ? IS NULL ORDER BY name', (team_id, team_id))
+        emps = cursor.fetchall()
+        conn.close()
+        return emps

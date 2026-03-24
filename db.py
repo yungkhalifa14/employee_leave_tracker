@@ -1,8 +1,8 @@
 import sqlite3
 import os
 
-# Store DB in user's home folder to avoid permission issues when frozen
-DB_FILE = os.path.join(os.path.expanduser('~'), 'leave_tracker.db')
+# For server deployment, store DB in the app directory or a configurable path
+DB_FILE = os.environ.get('DATABASE_URL', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'leave_tracker.db'))
 
 def get_connection():
     conn = sqlite3.connect(DB_FILE)
@@ -12,17 +12,31 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
     
-    # Create employees table
+    # Create teams table
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS teams (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            owner_id INTEGER REFERENCES employees(id)
+        )
+    ''')
+    
+    # Create employees table (acts as users)
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS employees (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
-            leave_limit INTEGER DEFAULT 26
+            leave_limit INTEGER DEFAULT 26,
+            username TEXT UNIQUE,
+            password_hash TEXT,
+            role TEXT DEFAULT 'user',
+            team_id INTEGER,
+            invite_token TEXT UNIQUE,
+            FOREIGN KEY (team_id) REFERENCES teams (id)
         )
     ''')
     
     # Create holidays table
-    # Using date string YYYY-MM-DD
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS holidays (
             date TEXT PRIMARY KEY,
@@ -31,7 +45,6 @@ def init_db():
     ''')
     
     # Create leaves table
-    # storing dates as YYYY-MM-DD strings
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS leaves (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -39,21 +52,53 @@ def init_db():
             start_date TEXT NOT NULL,
             end_date TEXT NOT NULL,
             reason TEXT,
+            status TEXT DEFAULT 'pending',
+            manager_comment TEXT,
             FOREIGN KEY (employee_id) REFERENCES employees (id)
         )
     ''')
     
     conn.commit()
     
-    # Auto-migration: check if leave_limit column exists
+    # Auto-migration for leaves table
+    cursor.execute("PRAGMA table_info(leaves)")
+    leave_cols = [info[1] for info in cursor.fetchall()]
+    
+    if 'status' not in leave_cols:
+        cursor.execute("ALTER TABLE leaves ADD COLUMN status TEXT DEFAULT 'approved'")
+        # For existing ones, we assume they were already approved
+        cursor.execute("UPDATE leaves set status = 'approved' where status IS NULL")
+    if 'manager_comment' not in leave_cols:
+        cursor.execute("ALTER TABLE leaves ADD COLUMN manager_comment TEXT")
+        
+    conn.commit()
+    
+    # Auto-migration for teams table
+    cursor.execute("PRAGMA table_info(teams)")
+    teams_cols = [info[1] for info in cursor.fetchall()]
+    if 'owner_id' not in teams_cols:
+        cursor.execute("ALTER TABLE teams ADD COLUMN owner_id INTEGER REFERENCES employees(id)")
+    
+    # Auto-migration: check if new columns exist in employees
     cursor.execute("PRAGMA table_info(employees)")
     columns = [info[1] for info in cursor.fetchall()]
+    
     if 'leave_limit' not in columns:
         cursor.execute("ALTER TABLE employees ADD COLUMN leave_limit INTEGER DEFAULT 26")
-        conn.commit()
-    
+    if 'username' not in columns:
+        cursor.execute("ALTER TABLE employees ADD COLUMN username TEXT")
+        cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_employee_username ON employees(username)")
+    if 'password_hash' not in columns:
+        cursor.execute("ALTER TABLE employees ADD COLUMN password_hash TEXT")
+    if 'role' not in columns:
+        cursor.execute("ALTER TABLE employees ADD COLUMN role TEXT DEFAULT 'user'")
+    if 'invite_token' not in columns:
+        cursor.execute("ALTER TABLE employees ADD COLUMN invite_token TEXT")
+        cursor.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_employee_invite ON employees(invite_token)")
+        
+    conn.commit()
     conn.close()
 
 if __name__ == '__main__':
     init_db()
-    print("Database initialized.")
+    print(f"Database initialized at {DB_FILE}")

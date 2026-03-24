@@ -1,60 +1,111 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<h2>Pracownicy</h2>
+<div class="dashboard-header">
+    <h2>Zarządzanie Pracownikami</h2>
+</div>
 
-<div class="card-container">
-    <div class="card add-form">
-        <h3>Dodaj Nowego Pracownika</h3>
-        <form method="post">
+<div class="card-container" style="align-items: flex-start;">
+    <!-- Add Employee Form (Admin Only) -->
+    {% if current_user.role == 'admin' %}
+    <div class="card">
+        <h3>Zaproś Pracownika</h3>
+        <form method="POST" action="{{ url_for('employees') }}">
             <div class="form-group">
-                <label for="name">Imię i Nazwisko</label>
+                <label for="name">Imię i nazwisko</label>
                 <input type="text" id="name" name="name" required placeholder="np. Jan Kowalski">
             </div>
-            <button type="submit" class="btn-primary">Dodaj Pracownika</button>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="team_id">Zespół</label>
+                    <select id="team_id" name="team_id">
+                        <option value="">Brak</option>
+                        {% for team in teams %}
+                        <option value="{{ team[0] }}">{{ team[1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="leave_limit">Limit urlopu</label>
+                    <input type="number" id="leave_limit" name="leave_limit" value="26" min="0" required>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Wygeneruj Link dla Pracownika</button>
         </form>
     </div>
+    {% endif %}
 
-    <div class="card list-view">
+    <!-- Employees List -->
+    <div class="card" style="flex: 2;">
         <h3>Lista Pracowników</h3>
+        {% if employees %}
         <table>
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Imię</th>
-                    <th>Pula</th>
+                    <th>Pracownik</th>
+                    <th>Rola</th>
+                    <th>Zespół</th>
+                    <th>Limit</th>
                     <th>Wykorzystane</th>
                     <th>Pozostało</th>
+                    <th>Status / Aktywacja</th>
                     <th>Akcje</th>
                 </tr>
             </thead>
             <tbody>
                 {% for emp in employees %}
                 <tr>
-                    <td>{{ emp.id }}</td>
-                    <td>{{ emp.name }}</td>
-                    <td>{{ emp.leave_limit }}</td>
-                    <td>{{ emp.used_days }}</td>
-                    <td class="{% if emp.remaining_days < 0 %}negative{% endif %}">{{ emp.remaining_days }}</td>
+                    <td><strong>{{ emp.name }}</strong></td>
                     <td>
-                        <div class="action-btns">
-                            <a href="{{ url_for('edit_employee', emp_id=emp.id) }}" class="btn-edit">Edytuj</a>
-                            <form action="{{ url_for('delete_employee', emp_id=emp.id) }}" method="POST"
-                                onsubmit="return confirm('Czy na pewno chcesz usunąć pracownika i wszystkie jego urlopy?');"
-                                style="display:inline;">
-                                <button type="submit" class="btn-delete">Usuń</button>
-                            </form>
-                        </div>
+                        <span class="badge {% if emp.role == 'admin' %}admin{% else %}user{% endif %}">
+                            {{ emp.role }}
+                        </span>
                     </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="5">Nie znaleziono pracowników.</td>
+                    <td>{{ emp.team_name }}</td>
+                    <td>{{ emp.leave_limit }} dni</td>
+                    <td>{{ emp.used_days }} dni</td>
+                    <td class="{% if emp.remaining_days < 0 %}negative{% endif %}">
+                        {{ emp.remaining_days }} dni
+                    </td>
+                    <td>
+                        {% if emp.invite_token %}
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <span class="badge" style="background: rgba(245,158,11,0.2); color: #fcd34d;">Oczekuje na aktywację</span>
+                            <button class="btn-sm btn-secondary" onclick="copyInvite('{{ url_for('invite', token=emp.invite_token, _external=True) }}')" title="Skopiuj link dla pracownika">Kopiuj Link</button>
+                        </div>
+                        {% else %}
+                        <span class="badge" style="background: rgba(16,185,129,0.2); color: #6ee7b7;">Aktywny</span>
+                        {% endif %}
+                    </td>
+                    <td class="action-btns">
+                        {% if current_user.role == 'admin' or current_user.id|string == emp.id|string %}
+                        <a href="{{ url_for('edit_employee', emp_id=emp.id) }}" class="btn-sm btn-edit">Edytuj</a>
+                        {% endif %}
+                        {% if current_user.role == 'admin' %}
+                        <form action="{{ url_for('delete_employee', emp_id=emp.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Czy na pewno chcesz usunąć tego pracownika i wszystkie jego urlopy?');">
+                            <button type="submit" class="btn-sm btn-delete">Usuń</button>
+                        </form>
+                        {% endif %}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
+        {% else %}
+        <p style="color: var(--text-secondary); padding: 20px 0;">Brak pracowników w bazie.</p>
+        {% endif %}
     </div>
 </div>
+
+<script>
+function copyInvite(url) {
+    navigator.clipboard.writeText(url).then(() => {
+        alert("Link skopiowany do schowka:\n" + url);
+    }).catch(err => {
+        console.error('Failed to copy text: ', err);
+    });
+}
+</script>
 {% endblock %}
-```

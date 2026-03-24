@@ -1,39 +1,46 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<h2>Edytuj Urlop</h2>
+<div class="dashboard-header">
+    <h2>Edytuj Wpis o Urlopie</h2>
+</div>
 
 <div class="card single-card">
-    <form method="post">
+    <form method="POST" action="{{ url_for('edit_leave', leave_id=leave[0]) }}">
         <div class="form-group">
             <label for="employee_id">Pracownik</label>
             <select id="employee_id" name="employee_id" required>
-                {% for emp_id, emp_name in employees %}
-                <option value="{{ emp_id }}" {% if emp_id==leave[1] %}selected{% endif %}>{{ emp_name }}</option>
+                {% for emp in employees %}
+                    <option value="{{ emp[0] }}" {% if leave[1] == emp[0] %}selected{% endif %}>{{ emp[1] }}</option>
                 {% endfor %}
             </select>
         </div>
-
+        
         <div class="form-row">
             <div class="form-group">
-                <label for="start_date">Data Rozpoczęcia</label>
-                <input type="date" id="start_date" name="start_date" value="{{ leave[2] }}" required>
+                <label for="start_date">Data Od</label>
+                <input type="date" id="start_date" name="start_date" required value="{{ leave[2] }}">
             </div>
-
             <div class="form-group">
-                <label for="end_date">Data Zakończenia</label>
-                <input type="date" id="end_date" name="end_date" value="{{ leave[3] }}" required>
+                <label for="end_date">Data Do</label>
+                <input type="date" id="end_date" name="end_date" required value="{{ leave[3] }}">
             </div>
         </div>
-
+        
         <div class="form-group">
-            <label for="reason">Powód</label>
-            <input type="text" id="reason" name="reason" value="{{ leave[4] }}" required>
+            <label for="reason">Rodzaj / Uwagi</label>
+            <select id="reason" name="reason" required>
+                <option value="Wypoczynkowy" {% if leave[4] == 'Wypoczynkowy' %}selected{% endif %}>Urlop Wypoczynkowy</option>
+                <option value="Na żądanie" {% if leave[4] == 'Na żądanie' %}selected{% endif %}>Urlop Na Żądanie</option>
+                <option value="Chorobowy" {% if leave[4] == 'Chorobowy' %}selected{% endif %}>Zwolnienie Chorobowe (L4)</option>
+                <option value="Opiekuńczy" {% if leave[4] == 'Opiekuńczy' %}selected{% endif %}>Opieka (Dziecko / Chory)</option>
+                <option value="Inne" {% if leave[4] not in ['Wypoczynkowy', 'Na żądanie', 'Chorobowy', 'Opiekuńczy'] %}selected{% endif %}>Inne / {{ leave[4] }}</option>
+            </select>
         </div>
-
-        <div class="form-row">
-            <button type="submit" class="btn-primary">Zapisz Zmiany</button>
-            <a href="{{ url_for('leaves') }}" class="btn-secondary">Anuluj</a>
+        
+        <div style="margin-top: 32px; display: flex; gap: 16px;">
+            <button type="submit" class="btn btn-primary" style="flex: 2;">Zapisz Zmiany</button>
+            <a href="{{ url_for('leaves') }}" class="btn btn-secondary" style="flex: 1; text-align: center;">Anuluj</a>
         </div>
     </form>
 </div>

@@ -5,60 +5,17 @@ import calendar
 from tracker import LeaveTracker
 from db import init_db
 from datetime import datetime, timedelta
-import sys
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from werkzeug.security import generate_password_hash, check_password_hash
 import os
-import webbrowser
-import threading
-import time
-import subprocess
 
-def resource_path(relative_path):
-    """ Get absolute path to resource, works for dev and for PyInstaller """
-    try:
-        # PyInstaller creates a temp folder and stores path in _MEIPASS
-        base_path = sys._MEIPASS
-    except Exception:
-        base_path = os.path.abspath(".")
-
-    return os.path.join(base_path, relative_path)
-
-def start_browser():
-    """ Opens the browser and shows a notification """
-    time.sleep(1.5) # Give Flask a moment to start
-    url = "http://127.0.0.1:5001"
-    
-    # Simple logging to debug
-    try:
-        log_path = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), 'app.log')
-        with open(log_path, 'a') as f:
-            f.write(f"[{datetime.now()}] Próba otwarcia przeglądarki dla {url}\n")
-    except:
-        pass
-
-    # Try webbrowser first
-    try:
-        webbrowser.open(url)
-    except Exception as e:
-        try:
-            with open(log_path, 'a') as f: f.write(f"Błąd webbrowser: {e}\n")
-        except: pass
-
-    # Additional macOS explicit handling for notification
-    if sys.platform == 'darwin':
-        try:
-            # Notification
-            script = f'display notification "Aplikacja działa pod adresem {url}" with title "Monitor Urlopów Uruchomiony"'
-            subprocess.run(["osascript", "-e", script])
-        except Exception as e:
-            try:
-                with open(log_path, 'a') as f: f.write(f"Błąd subprocess: {e}\n")
-            except: pass
-
-template_folder = resource_path('templates')
-static_folder = resource_path('static')
-
-app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
+app = Flask(__name__)
 app.secret_key = 'super_secret_key'  # Needed for flash messages
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
 
 tracker = LeaveTracker()
 # Ensure DB is ready
@@ -69,6 +26,94 @@ POLISH_MONTHS = {
     5: "Maj", 6: "Czerwiec", 7: "Lipiec", 8: "Sierpień",
     9: "Wrzesień", 10: "Październik", 11: "Listopad", 12: "Grudzień"
 }
+
+# User Class for Flask-Login
+class User(UserMixin):
+    def __init__(self, id, name, username, role, team_id):
+        self.id = str(id)
+        self.name = name
+        self.username = username
+        self.role = role
+        self.team_id = team_id
+
+@login_manager.user_loader
+def load_user(user_id):
+    emp = tracker.get_employee_by_id(int(user_id))
+    if emp and emp[3]: # ensure username exists
+        return User(id=emp[0], name=emp[1], username=emp[3], role=emp[5], team_id=emp[6])
+    return None
+
+@app.context_processor
+def inject_pending_leaves():
+    if current_user.is_authenticated and current_user.role == 'admin':
+        pending = tracker.get_pending_leaves()
+        return dict(pending_leaves_count=len(pending), pending_leaves=pending)
+    return dict(pending_leaves_count=0, pending_leaves=[])
+
+# --- AUTH ROUTES ---
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+        
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        user_data = tracker.get_user_by_username(username)
+        # user_data: id, name, leave_limit, username, password_hash, role, team_id
+        if user_data and user_data[4] and check_password_hash(user_data[4], password):
+            user = User(id=user_data[0], name=user_data[1], username=user_data[3], role=user_data[5], team_id=user_data[6])
+            login_user(user)
+            return redirect(url_for('dashboard'))
+        else:
+            flash('Nieprawidłowa nazwa użytkownika lub hasło', 'error')
+            
+    return render_template('login.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('login'))
+
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    # Only allow registration if no users exist, OR if current user is admin
+    # Actually, let's let anyone register for now, but in reality you'd want admin only.
+    if request.method == 'POST':
+        name = request.form.get('name')
+        username = request.form.get('username')
+        password = request.form.get('password')
+        team_id = request.form.get('team_id') or None
+        
+        if not name or not username or not password:
+            flash("Wszystkie pola są wymagane", "error")
+            return redirect(url_for('register'))
+            
+        existing = tracker.get_user_by_username(username)
+        if existing:
+            flash("Użytkownik już istnieje", "error")
+            return redirect(url_for('register'))
+            
+        hashed_pw = generate_password_hash(password)
+        
+        # Make the first user an admin automatically, others user
+        # We can check if any user exists. For simplicity, just make everyone 'user'
+        # and we can make a CLI command to make admin, but let's make the first user admin.
+        all_emps = tracker.get_employees_with_balance() # just to check count roughly
+        role = 'admin' if len(all_emps) == 0 else 'user'
+        
+        if team_id:
+            team_id = int(team_id)
+            
+        tracker.add_employee(name, username, hashed_pw, role, team_id)
+        flash("Konto utworzone. Możesz się zalogować.", "success")
+        return redirect(url_for('login'))
+        
+    teams = tracker.get_all_teams()
+    return render_template('register.html', teams=teams)
 
 
 def get_safe_year_month():
@@ -83,17 +128,20 @@ def get_safe_year_month():
     except (ValueError, TypeError):
         month = today.month
     return year, month
-def get_calendar_context(year, month):
-    # Calculate start and end of month
+
+def get_calendar_context(year, month, team_id_filter=None):
     _, last_day = calendar.monthrange(year, month)
-    
     start_date = f"{year}-{month:02d}-01"
     end_date = f"{year}-{month:02d}-{last_day:02d}"
     
-    # Get calendar data
     events = tracker.get_monthly_data(start_date, end_date)
     
-    # We need to construct the calendar grid
+    # Optional team filter
+    # If team_id_filter is set, we need to filter the absentees
+    if team_id_filter:
+        team_emps = tracker.get_employees_by_team(team_id_filter)
+        team_emp_names = {t[1] for t in team_emps}
+        
     cal = calendar.monthcalendar(year, month)
     calendar_data = []
     
@@ -105,14 +153,26 @@ def get_calendar_context(year, month):
             else:
                 date_str = f"{year}-{month:02d}-{day:02d}"
                 day_events = events.get(date_str)
+                
+                # Apply team filter to events
+                filtered_events = None
+                if day_events:
+                    filtered_absentees = day_events['absentees']
+                    if team_id_filter:
+                        filtered_absentees = [a for a in filtered_absentees if a['name'] in team_emp_names]
+                    
+                    filtered_events = {
+                        'holiday': day_events['holiday'],
+                        'absentees': filtered_absentees
+                    }
+
                 week_data.append({
                     'day': day,
                     'date': date_str,
-                    'events': day_events
+                    'events': filtered_events
                 })
         calendar_data.append(week_data)
     
-    # Navigation links
     next_month = month + 1
     next_year = year
     if next_month > 12:
@@ -133,43 +193,46 @@ def get_calendar_context(year, month):
         'prev_month': prev_month,
         'prev_year': prev_year,
         'next_month': next_month,
-        'next_year': next_year
+        'next_year': next_year,
+        'current_team_filter': team_id_filter
     }
 
 @app.route('/')
+@login_required
 def dashboard():
     year, month = get_safe_year_month()
     
-    context = get_calendar_context(year, month)
-    return render_template('dashboard.html', **context, public_mode=False, endpoint='dashboard')
+    # Team filtering
+    team_filter = request.args.get('team_id')
+    if team_filter and team_filter.isdigit():
+        team_filter = int(team_filter)
+    else:
+        team_filter = None
+        
+    context = get_calendar_context(year, month, team_id_filter=team_filter)
+    teams = tracker.get_all_teams()
+    return render_template('dashboard.html', **context, teams=teams, endpoint='dashboard')
 
 @app.route('/public')
 def public_calendar():
     year, month = get_safe_year_month()
-    
     context = get_calendar_context(year, month)
     return render_template('dashboard.html', **context, public_mode=True, endpoint='public_calendar')
 
 @app.route('/export_csv')
+@login_required
 def export_csv():
     year, month = get_safe_year_month()
-    
-    # Use helper to reuse logic? Actually helper returns UI structure.
-    # We need raw data. Let's use get_monthly_data.
-    
     _, last_day = calendar.monthrange(year, month)
     start_date = f"{year}-{month:02d}-01"
     end_date = f"{year}-{month:02d}-{last_day:02d}"
     
-    # Get raw data
     data = tracker.get_monthly_data(start_date, end_date)
     
-    # Prepare CSV
     si = io.StringIO()
     cw = csv.writer(si)
     cw.writerow(['Date', 'Type', 'Details'])
     
-    # Iterate all days in month
     curr = datetime.strptime(start_date, "%Y-%m-%d")
     end = datetime.strptime(end_date, "%Y-%m-%d")
     
@@ -191,23 +254,87 @@ def export_csv():
     output.headers["Content-type"] = "text/csv"
     return output
 
+@app.route('/invite/<token>', methods=['GET', 'POST'])
+def invite(token):
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
+        
+    emp = tracker.get_employee_by_token(token)
+    if not emp:
+        flash("Link aktywacyjny jest nieprawidłowy lub wygasł.", 'error')
+        return redirect(url_for('login'))
+        
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if username and password:
+            if tracker.get_user_by_username(username):
+                flash("Ta nazwa użytkownika jest już zajęta.", "error")
+            else:
+                pw_hash = generate_password_hash(password)
+                if tracker.claim_invite(token, username, pw_hash):
+                    flash("Konto zostało aktywowane! Możesz się teraz zalogować.", 'success')
+                    return redirect(url_for('login'))
+                else:
+                    flash("Wystąpił błąd podczas aktywacji.", "error")
+        else:
+            flash("Wszystkie pola są wymagane.", 'error')
+            
+    return render_template('invite.html', employee=emp)
+
 @app.route('/employees', methods=['GET', 'POST'])
+@login_required
 def employees():
     if request.method == 'POST':
+        if current_user.role != 'admin':
+            flash("Brak uprawnień.", 'error')
+            return redirect(url_for('employees'))
+            
         name = request.form.get('name')
-        if name:
-            tracker.add_employee(name)
-            flash(f"Pracownik {name} został dodany.", 'success')
+        limit = request.form.get('leave_limit', 26)
+        team_id = request.form.get('team_id')
+        
+        if name and limit:
+            try:
+                limit = int(limit)
+                t_id = int(team_id) if team_id else None
+                # Create without credentials, generating invite token
+                token = tracker.add_employee(name, limit, None, None, 'user', t_id)
+                if token:
+                    invite_link = url_for('invite', token=token, _external=True)
+                    flash(f"Pracownik dodany! Link do zaproszenia: {invite_link}", 'success')
+                else:
+                    flash("Nie udało się dodać pracownika.", 'error')
+            except ValueError:
+                flash("Limit urlopu musi być liczbą.", 'error')
         else:
-            flash("Imię jest wymagane.", 'error')
+            flash("Imię i limit są wymagane.", 'error')
         return redirect(url_for('employees'))
     
-    # Use new method to get balance info
-    all_emps = tracker.get_employees_with_balance()
-    return render_template('employees.html', employees=all_emps)
+    # Scope to current_user
+    all_emps = tracker.get_employees_with_balance(current_user.id if current_user.role == 'admin' else None)
+    teams = tracker.get_all_teams(current_user.id if current_user.role == 'admin' else None)
+    
+    # We also want to map team names
+    team_map = {t[0]: t[1] for t in teams}
+    for emp in all_emps:
+        # We need team_id and role from full data
+        full_data = tracker.get_employee_by_id(emp['id'])
+        if full_data:
+            emp['role'] = full_data[5]
+            t_id = full_data[6]
+            emp['team_name'] = team_map.get(t_id, 'Brak')
+            
+    return render_template('employees.html', employees=all_emps, teams=teams)
 
 @app.route('/employees/edit/<int:emp_id>', methods=['GET', 'POST'])
+@login_required
 def edit_employee(emp_id):
+    if current_user.role != 'admin' and int(current_user.id) != emp_id:
+        flash("Brak uprawnień.", 'error')
+        return redirect(url_for('employees'))
+        
     emp = tracker.get_employee_by_id(emp_id)
     if not emp:
         flash("Pracownik nie znaleziony.", 'error')
@@ -216,24 +343,59 @@ def edit_employee(emp_id):
     if request.method == 'POST':
         name = request.form.get('name')
         limit = request.form.get('leave_limit')
-        if name and limit:
-            tracker.update_employee(emp_id, name, int(limit))
-            flash(f"Dane pracownika {name} zostały zaktualizowane.", 'success')
-            return redirect(url_for('employees'))
+        team_id = request.form.get('team_id')
+        
+        # Only admin can change limits and teams
+        if current_user.role == 'admin':
+            if name and limit:
+                t_id = int(team_id) if team_id else None
+                tracker.update_employee(emp_id, name, int(limit), t_id)
+                flash(f"Dane pracownika {name} zostały zaktualizowane.", 'success')
+                return redirect(url_for('employees'))
+            else:
+                flash("Wszystkie pola są wymagane.", 'error')
         else:
-            flash("Wszystkie pola są wymagane.", 'error')
+            flash("Nie masz uprawnień do edycji tych danych.", "error")
             
-    return render_template('edit_employee.html', employee=emp)
+    teams = tracker.get_all_teams()
+    return render_template('edit_employee.html', employee=emp, teams=teams)
 
 @app.route('/employees/delete/<int:emp_id>', methods=['POST'])
+@login_required
 def delete_employee(emp_id):
+    if current_user.role != 'admin':
+        flash("Brak uprawnień.", 'error')
+        return redirect(url_for('employees'))
+        
     tracker.delete_employee(emp_id)
     flash("Pracownik został usunięty.", 'success')
     return redirect(url_for('employees'))
 
+@app.route('/teams', methods=['GET', 'POST'])
+@login_required
+def teams_view():
+    if current_user.role != 'admin':
+        flash("Brak uprawnień.", 'error')
+        return redirect(url_for('dashboard'))
+        
+    if request.method == 'POST':
+        name = request.form.get('name')
+        if name:
+            tracker.add_team(name, current_user.id)
+            flash(f"Zespół {name} dodany.", "success")
+        return redirect(url_for('teams_view'))
+        
+    all_teams = tracker.get_all_teams(current_user.id)
+    return render_template('teams.html', teams=all_teams)
+
 @app.route('/holidays', methods=['GET', 'POST'])
+@login_required
 def holidays():
     if request.method == 'POST':
+        if current_user.role != 'admin':
+            flash("Brak uprawnień.", 'error')
+            return redirect(url_for('holidays'))
+            
         name = request.form.get('name')
         date = request.form.get('date')
         if name and date:
@@ -243,11 +405,6 @@ def holidays():
             flash("Nazwa i data są wymagane.", 'error')
         return redirect(url_for('holidays'))
         
-    # We don't have a get_all_holidays method in tracker yet.
-    # Let's add a quick query here or update tracker. 
-    # For speed, I'll do a quick query here, but cleaner would be in tracker.
-    # I'll rely on the user just adding them for now, but listing them is good.
-    # Let's add a helper method in this file for now to list holidays.
     from db import get_connection
     conn = get_connection()
     cursor = conn.cursor()
@@ -258,6 +415,7 @@ def holidays():
     return render_template('holidays.html', holidays=existing_holidays)
 
 @app.route('/leaves', methods=['GET', 'POST'])
+@login_required
 def leaves():
     if request.method == 'POST':
         emp_id = request.form.get('employee_id')
@@ -265,22 +423,49 @@ def leaves():
         end = request.form.get('end_date')
         reason = request.form.get('reason')
         
+        # Only admin can add leave for others
+        if current_user.role != 'admin' and str(current_user.id) != str(emp_id):
+            flash("Brak uprawnień do dodawania urlopu dla innej osoby.", 'error')
+            return redirect(url_for('leaves'))
+            
         if emp_id and start and end and reason:
-            tracker.add_leave(emp_id, start, end, reason)
-            flash("Urlop został zarezerwowany.", 'success')
+            status = 'approved' if current_user.role == 'admin' else 'pending'
+            tracker.add_leave(emp_id, start, end, reason, status=status)
+            if status == 'pending':
+                flash("Wniosek o urlop został wysłany i oczekuje na akceptację.", 'success')
+            else:
+                flash("Urlop został zarezerwowany.", 'success')
         else:
             flash("Wszystkie pola są wymagane.", 'error')
         return redirect(url_for('leaves'))
     
-    all_emps = tracker.get_all_employees()
+    if current_user.role == 'admin':
+        all_emps = tracker.get_all_employees()
+    else:
+        # Normal user can only see themselves in dropdown
+        all_emps = [(current_user.id, current_user.name)]
+        
     all_leaves = tracker.get_all_leaves()
+    # If not admin, maybe filter leaves list to just their team or themselves? 
+    # Let's show all for transparency or team only.
+    if current_user.role != 'admin' and current_user.team_id:
+        # Filter leaves by team
+        team_emps = tracker.get_employees_by_team(current_user.team_id)
+        team_names = {t[1] for t in team_emps}
+        all_leaves = [l for l in all_leaves if l[1] in team_names]
+        
     return render_template('leaves.html', employees=all_emps, leaves=all_leaves)
 
 @app.route('/leaves/edit/<int:leave_id>', methods=['GET', 'POST'])
+@login_required
 def edit_leave(leave_id):
     leave = tracker.get_leave_by_id(leave_id)
     if not leave:
         flash("Urlop nie znaleziony.", 'error')
+        return redirect(url_for('leaves'))
+        
+    if current_user.role != 'admin' and str(leave[1]) != str(current_user.id):
+        flash("Brak uprawnień.", 'error')
         return redirect(url_for('leaves'))
     
     if request.method == 'POST':
@@ -296,36 +481,46 @@ def edit_leave(leave_id):
         else:
             flash("Wszystkie pola są wymagane.", 'error')
             
-    all_emps = tracker.get_all_employees()
+    if current_user.role == 'admin':
+        all_emps = tracker.get_all_employees()
+    else:
+        all_emps = [(current_user.id, current_user.name)]
+        
     return render_template('edit_leave.html', leave=leave, employees=all_emps)
 
 @app.route('/leaves/delete/<int:leave_id>', methods=['POST'])
+@login_required
 def delete_leave(leave_id):
-    tracker.delete_leave(leave_id)
-    flash("Wpis o urlopie został usunięty.", 'success')
+    leave = tracker.get_leave_by_id(leave_id)
+    if leave and (current_user.role == 'admin' or str(leave[1]) == str(current_user.id)):
+        tracker.delete_leave(leave_id)
+        flash("Wpis o urlopie został usunięty.", 'success')
+    else:
+        flash("Brak uprawnień.", 'error')
     return redirect(url_for('leaves'))
 
-@app.route('/shutdown')
-def shutdown():
-    """ Gracefully shut down the server """
-    def delayed_shutdown():
-        time.sleep(1)
-        os._exit(0)
+@app.route('/leave/approve/<int:leave_id>', methods=['POST'])
+@login_required
+def approve_leave(leave_id):
+    if current_user.role != 'admin':
+        flash("Brak uprawnień.", 'error')
+        return redirect(request.referrer or url_for('dashboard'))
         
-    threading.Thread(target=delayed_shutdown).start()
-    return "Serwer jest wyłączany... Możesz zamknąć to okno."
+    tracker.approve_leave(leave_id)
+    flash("Wniosek urlopowy został zatwierdzony.", 'success')
+    return redirect(request.referrer or url_for('dashboard'))
+
+@app.route('/leave/decline/<int:leave_id>', methods=['POST'])
+@login_required
+def decline_leave(leave_id):
+    if current_user.role != 'admin':
+        flash("Brak uprawnień.", 'error')
+        return redirect(request.referrer or url_for('dashboard'))
+        
+    comment = request.form.get('manager_comment', 'Odrzucono bez komentarza')
+    tracker.decline_leave(leave_id, comment)
+    flash("Wniosek urlopowy został odrzucony.", 'success')
+    return redirect(request.referrer or url_for('dashboard'))
 
 if __name__ == '__main__':
-
-    try:
-        threading.Thread(target=start_browser, daemon=True).start()
-        app.run(host='0.0.0.0', debug=False, port=5001)
-    except Exception as e:
-        try:
-            log_path = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), 'app.log')
-            with open(log_path, 'a') as f:
-                f.write(f"[{datetime.now()}] CRITICAL ERROR: {e}\n")
-                import traceback
-                traceback.print_exc(file=f)
-        except:
-            pass
+    app.run(host='0.0.0.0', debug=True, port=5001)

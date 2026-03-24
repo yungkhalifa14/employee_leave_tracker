@@ -1,0 +1,47 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h2>Zarządzanie Zespołami</h2>
+</div>
+
+<div class="card-container" style="align-items: flex-start;">
+    <!-- Add Team Form -->
+    <div class="card">
+        <h3>Dodaj Nowy Zespół</h3>
+        <form method="POST" action="{{ url_for('teams_view') }}">
+            <div class="form-group">
+                <label for="name">Nazwa Zespołu</label>
+                <input type="text" id="name" name="name" required placeholder="np. Marketing">
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Dodaj Zespół</button>
+        </form>
+    </div>
+
+    <!-- Teams List -->
+    <div class="card" style="flex: 2;">
+        <h3>Lista Zespołów</h3>
+        {% if teams %}
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Nazwa Zespołu</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for team in teams %}
+                <tr>
+                    <td><span class="badge">{{ team[0] }}</span></td>
+                    <td><strong>{{ team[1] }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: var(--text-secondary); padding: 20px 0;">Brak zespołów w bazie danych.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
