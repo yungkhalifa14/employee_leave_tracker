@@ -1,26 +1,57 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="dashboard-header">
+<div class="page-header animate-fade-up">
     <div>
-        <h2>Zestawienie Miesięczne</h2>
-        <p style="color: var(--text-secondary);">Podgląd kalendarza urlopowego i świąt</p>
+        <h1>Zestawienie Miesięczne</h1>
+        <p>Monitoruj obecność i planuj urlopy swojego zespołu</p>
     </div>
     
-    <div class="calendar-nav">
-        <a href="{{ url_for(endpoint, year=prev_year, month=prev_month, team_id=current_team_filter) }}" class="nav-btn">&laquo; Poprzedni</a>
-        <h3 style="margin: 0; min-width: 150px; text-align: center;">{{ month_name }} {{ year }}</h3>
-        <a href="{{ url_for(endpoint, year=next_year, month=next_month, team_id=current_team_filter) }}" class="nav-btn">Następny &raquo;</a>
+    <div class="calendar-nav" style="display: flex; align-items: center; gap: 24px;">
+        <a href="{{ url_for(endpoint, year=prev_year, month=prev_month, team_id=current_team_filter) }}" class="btn btn-secondary" style="width: auto;">&laquo; Poprzedni</a>
+        <h3 style="margin: 0; min-width: 150px; text-align: center; color: white;">{{ month_name }} {{ year }}</h3>
+        <a href="{{ url_for(endpoint, year=next_year, month=next_month, team_id=current_team_filter) }}" class="btn btn-secondary" style="width: auto;">Następny &raquo;</a>
     </div>
 </div>
 
+<!-- Stats Row -->
+<div class="stats-row animate-fade-up" style="animation-delay: 0.1s;">
+    {% if current_user.role == 'employee' %}
+    <div class="stat-card">
+        <div class="label">Wykorzystany urlop</div>
+        <div class="value" style="color: var(--accent);">{{ stats.used }} <span style="font-size: 14px; color: var(--text-muted);">DNI</span></div>
+    </div>
+    <div class="stat-card">
+        <div class="label">Pozostały urlop</div>
+        <div class="value" style="color: var(--success);">{{ stats.remaining }} <span style="font-size: 14px; color: var(--text-muted);">DNI</span></div>
+    </div>
+    <div class="stat-card">
+        <div class="label">Wnioski w toku</div>
+        <div class="value" style="color: var(--warning);">{{ stats.pending }} <span style="font-size: 14px; color: var(--text-muted);">SZT</span></div>
+    </div>
+    {% else %}
+    <div class="stat-card">
+        <div class="label">Nieobecni dzisiaj</div>
+        <div class="value" style="color: var(--accent);">{{ stats.out_today }} <span style="font-size: 14px; color: var(--text-muted);">PRAC.</span></div>
+    </div>
+    <div class="stat-card">
+        <div class="label">Oczekujące wnioski</div>
+        <div class="value" style="color: var(--warning);">{{ stats.pending_total }} <span style="font-size: 14px; color: var(--text-muted);">SZT</span></div>
+    </div>
+    <div class="stat-card">
+        <div class="label">Aktywne zespoły</div>
+        <div class="value" style="color: var(--text-primary);">{{ teams|length }}</div>
+    </div>
+    {% endif %}
+</div>
+
 {% if not public_mode and teams %}
-<div class="filter-bar">
-    <span style="font-weight: 500; color: var(--text-secondary);">Filtruj według zespołu:</span>
-    <form method="GET" action="{{ url_for('dashboard') }}">
+<div class="glass-panel animate-fade-up" style="margin-bottom: 32px; padding: 16px 24px; animation-delay: 0.2s;">
+    <form method="GET" action="{{ url_for('dashboard') }}" style="display: flex; align-items: center; gap: 16px;">
+        <span style="font-size: 13px; font-weight: 600; color: var(--text-secondary); text-transform: uppercase;">Filtr Zespołu:</span>
         <input type="hidden" name="year" value="{{ year }}">
         <input type="hidden" name="month" value="{{ month }}">
-        <select name="team_id" onchange="this.form.submit()">
+        <select name="team_id" onchange="this.form.submit()" style="width: auto; min-width: 250px;">
             <option value="">Wszystkie Zespoły</option>
             {% for t in teams %}
             <option value="{{ t[0] }}" {% if current_team_filter == t[0] %}selected{% endif %}>{{ t[1] }}</option>
@@ -30,91 +61,88 @@
 </div>
 {% endif %}
 
-<div class="calendar-container">
-    <div class="weekdays">
-        <div>Poniedziałek</div>
-        <div>Wtorek</div>
-        <div>Środa</div>
-        <div>Czwartek</div>
-        <div>Piątek</div>
-        <div>Sobota</div>
-        <div>Niedziela</div>
+<div class="calendar-widget animate-fade-up" style="animation-delay: 0.3s;">
+    <div class="calendar-grid-header">
+        <div>Pon</div><div>Wt</div><div>Śr</div><div>Czw</div><div>Pt</div><div>Sob</div><div>Nie</div>
     </div>
     
-    {% for week in calendar_data %}
-    <div class="week">
-        {% for day_data in week %}
-            {% if day_data == None %}
-                <div class="day empty"></div>
-            {% else %}
-                <div class="day">
-                    <span class="day-num">{{ day_data.day }}</span>
-                    
-                    {% if day_data.events %}
-                        {% if day_data.events.holiday %}
-                            <div class="event-marker holiday-marker" title="Święto: {{ day_data.events.holiday }}">
-                                🌴 {{ day_data.events.holiday }}
-                            </div>
-                        {% endif %}
+    <div class="calendar-days-grid">
+        {% for week in calendar_data %}
+            {% for day_data in week %}
+                {% if day_data == None %}
+                    <div class="calendar-cell empty"></div>
+                {% else %}
+                    <div class="calendar-cell">
+                        <div class="date-badge">{{ day_data.day }}</div>
                         
-                        {% for absentee in day_data.events.absentees %}
-                            {% if absentee.status == 'pending' %}
-                                {% if current_user.role == 'admin' %}
-                                <div class="event-marker pending-marker clickable" 
-                                     onclick='openApprovalModal({{ absentee.id }}, {{ absentee.name | tojson | safe }}, {{ absentee.reason | tojson | safe }})'
-                                     title="Wniosek oczekujący - Kliknij aby rozpatrzyć">
-                                    ⏳ {{ absentee.name }}
+                        {% if day_data.events %}
+                            {% if day_data.events.holiday %}
+                                <div class="event-pill event-holiday" title="Święto: {{ day_data.events.holiday }}">
+                                    {{ day_data.events.holiday }}
                                 </div>
+                            {% endif %}
+                            
+                            {% for absentee in day_data.events.absentees %}
+                                {% if absentee.status == 'pending' %}
+                                    {% if current_user.role in ['admin', 'manager'] %}
+                                    <div class="event-pill event-pending clickable" 
+                                         onclick='openApprovalModal({{ absentee.id }}, {{ absentee.name | tojson | safe }}, {{ absentee.reason | tojson | safe }})'
+                                         title="Oczekujący - Kliknij aby rozpatrzyć">
+                                        {{ absentee.name }} (⏳)
+                                    </div>
+                                    {% else %}
+                                    <div class="event-pill event-pending" title="Oczekujący: {{ absentee.name }}">
+                                        {{ absentee.name }}
+                                    </div>
+                                    {% endif %}
                                 {% else %}
-                                <div class="event-marker pending-marker" title="Oczekujący: {{ absentee.name }} - {{ absentee.reason }}">
-                                    ⏳ {{ absentee.name }}
+                                <div class="event-pill event-leave" title="{{ absentee.name }} - {{ absentee.reason }}">
+                                    {{ absentee.name }}
                                 </div>
                                 {% endif %}
-                            {% else %}
-                            <div class="event-marker leave-marker" title="{{ absentee.name }} - {{ absentee.reason }}">
-                                👤 {{ absentee.name }}
-                            </div>
-                            {% endif %}
-                        {% endfor %}
-                    {% endif %}
-                </div>
-            {% endif %}
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                {% endif %}
+            {% endfor %}
         {% endfor %}
     </div>
-    {% endfor %}
 </div>
 
 {% if not public_mode %}
-<div style="margin-top: 32px; display: flex; justify-content: flex-end;">
-    <a href="{{ url_for('export_csv', year=year, month=month) }}" class="btn btn-secondary" style="width: auto;">
-        <svg style="width:16px; height:16px; margin-right:8px; display:inline;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-        Pobierz CSV Miesiąca
+<div style="margin-top: 32px; display: flex; justify-content: flex-end;" class="animate-fade-up">
+    <a href="{{ url_for('export_csv', year=year, month=month) }}" class="btn btn-secondary">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Eksportuj Raport Miesięczny (CSV)
     </a>
 </div>
 {% endif %}
-<!-- Leave Approval Modal -->
+
+<!-- Modal -->
 <div id="approvalModal" class="modal-overlay">
     <div class="modal-content">
         <div class="modal-header">
             Rozpatrz Wniosek Urlopowy
         </div>
         <div class="modal-body">
-            <p><strong>Pracownik:</strong> <span id="modalEmpName"></span></p>
-            <p><strong>Rodzaj/Uwagi:</strong> <span id="modalEmpReason"></span></p>
+            <p style="color: var(--text-secondary); margin-bottom: 4px;">PRACOWNIK</p>
+            <p style="font-weight: 600; font-size: 18px; margin-bottom: 16px;" id="modalEmpName"></p>
+            <p style="color: var(--text-secondary); margin-bottom: 4px;">OPIS / POWÓD</p>
+            <p style="margin-bottom: 24px;" id="modalEmpReason"></p>
             
-            <form id="declineForm" method="POST" style="margin-top: 20px;">
+            <form id="declineForm" method="POST">
                 <div class="form-group">
-                    <label for="manager_comment">Komentarz / Uzasadnienie (wymagane przy odrzuceniu)</label>
+                    <label>Uzasadnienie (wymagane przy odrzuceniu)</label>
                     <textarea id="manager_comment" name="manager_comment" rows="3" placeholder="Wpisz uzasadnienie..."></textarea>
                 </div>
             </form>
         </div>
         <div class="modal-footer">
-            <button class="btn btn-secondary" style="width: auto;" onclick="closeModal()">Anuluj</button>
+            <button class="btn btn-secondary" onclick="closeModal()">Anuluj</button>
             <form id="approveForm" method="POST" style="margin: 0;">
-                <button type="submit" class="btn btn-success" style="width: auto;">Akceptuj</button>
+                <button type="submit" class="btn btn-primary" style="background: var(--success);">Zaakceptuj</button>
             </form>
-            <button class="btn btn-primary" style="background: var(--danger); width: auto;" onclick="submitDecline()">Odrzuć</button>
+            <button class="btn btn-primary" style="background: var(--danger);" onclick="submitDecline()">Odrzuć</button>
         </div>
     </div>
 </div>
@@ -127,11 +155,8 @@
     function openApprovalModal(leaveId, empName, reason) {
         document.getElementById('modalEmpName').textContent = empName;
         document.getElementById('modalEmpReason').textContent = reason;
-        
-        // Set form actions
         approveForm.action = "/leave/approve/" + leaveId;
         declineForm.action = "/leave/decline/" + leaveId;
-        
         modal.classList.add('active');
     }
     
@@ -148,12 +173,5 @@
         }
         declineForm.submit();
     }
-    
-    // Close modal if clicked outside
-    modal.addEventListener('click', function(e) {
-        if (e.target === modal) {
-            closeModal();
-        }
-    });
 </script>
 {% endblock %}

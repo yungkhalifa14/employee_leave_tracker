@@ -1,42 +1,59 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<div class="dashboard-header">
-    <h2>Edytuj Użytkownika - {{ employee[1] }}</h2>
-</div>
+<div class="main-content">
+    <div style="max-width: 600px; margin: 0 auto;">
+        <h1>Edytuj Pracownika</h1>
+        <div class="card">
+            <form method="POST">
+                <div class="form-group">
+                    <label for="name">Imię i nazwisko</label>
+                    <input type="text" id="name" name="name" value="{{ emp.name }}" required>
+                </div>
 
-<div class="card single-card">
-    <form method="POST" action="{{ url_for('edit_employee', emp_id=employee[0]) }}">
-        <!-- Readonly for non-admins -->
-        <div class="form-group">
-            <label for="name">Imię i nazwisko</label>
-            <input type="text" id="name" name="name" required value="{{ employee[1] }}" {% if current_user.role != 'admin' %}readonly{% endif %}>
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" name="email" value="{{ emp.email or '' }}" placeholder="np. jan.kowalski@firma.pl">
+                </div>
+
+                <div class="form-group">
+                    <label for="leave_limit">Limit urlopu</label>
+                    <input type="number" id="leave_limit" name="leave_limit" value="{{ emp.leave_limit or 26 }}" min="0" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="team_id">Zespół</label>
+                    <select id="team_id" name="team_id">
+                        <option value="-1" {% if not emp.team_id %}selected{% endif %}>Brak zespołu</option>
+                        {% for team in teams %}
+                        <option value="{{ team[0] }}" {% if emp.team_id == team[0] %}selected{% endif %}>{{ team[1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                {% if current_user.role == 'admin' and current_user.id != emp.id %}
+                <div class="form-group">
+                    <label for="role">Rola</label>
+                    <select id="role" name="role">
+                        <option value="employee" {% if emp.role == 'employee' %}selected{% endif %}>Employee</option>
+                        <option value="manager" {% if emp.role == 'manager' %}selected{% endif %}>Manager</option>
+                        <option value="admin" {% if emp.role == 'admin' %}selected{% endif %}>Admin</option>
+                    </select>
+                </div>
+                {% endif %}
+
+                <div class="form-group" style="border-top: 1px solid var(--border); margin-top: 24px; padding-top: 24px;">
+                    <label for="new_password">Zmień Hasło (opcjonalnie)</label>
+                    <input type="password" id="new_password" name="new_password" placeholder="Pozostaw puste, aby nie zmieniać">
+                    <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 4px;">Wprowadź nowe hasło dla tego użytkownika, jeśli chcesz je zresetować.</p>
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-top: 24px;">
+                    <button type="submit" class="btn btn-primary">Zapisz Zmiany</button>
+                    <a href="{{ url_for('employees') }}" class="btn btn-secondary">Anuluj</a>
+                </div>
+            </form>
         </div>
-        <div class="form-group">
-            <label for="leave_limit">Limit Urlopu (dni w roku)</label>
-            <input type="number" id="leave_limit" name="leave_limit" required value="{{ employee[2] }}" {% if current_user.role != 'admin' %}readonly{% endif %}>
-        </div>
-        <div class="form-group">
-            <label for="team_id">Zespół</label>
-            <select id="team_id" name="team_id" {% if current_user.role != 'admin' %}disabled{% endif %}>
-                <option value="">Brak zespołu</option>
-                {% for team in teams %}
-                <option value="{{ team[0] }}" {% if employee[6] == team[0] %}selected{% endif %}>{{ team[1] }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        
-        {% if current_user.role == 'admin' %}
-        <div style="margin-top: 32px; display: flex; gap: 16px;">
-            <button type="submit" class="btn btn-primary" style="flex: 2;">Zapisz Zmiany</button>
-            <a href="{{ url_for('employees') }}" class="btn btn-secondary" style="flex: 1; text-align: center;">Anuluj</a>
-        </div>
-        {% else %}
-        <div style="margin-top: 32px;">
-            <a href="{{ url_for('employees') }}" class="btn btn-secondary">Wróć do listy</a>
-            <p style="color: var(--text-secondary); margin-top: 12px; font-size: 14px;">Tylko administrator może edytować przydział i limity.</p>
-        </div>
-        {% endif %}
-    </form>
+    </div>
 </div>
 {% endblock %}

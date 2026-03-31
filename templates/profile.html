@@ -1,0 +1,60 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div style="max-width: 800px; margin: 0 auto;">
+    <div class="page-header animate-fade-up">
+        <div>
+            <h1>Ustawienia Profilu</h1>
+            <p>Twoje dane osobowe i zabezpieczenia konta</p>
+        </div>
+    </div>
+    
+    <div class="glass-panel animate-fade-up" style="animation-delay: 0.1s; margin-bottom: 32px;">
+        <h3 style="color: white; margin-bottom: 24px;">Informacje o Koncie</h3>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px;">
+            <div>
+                <label>IDENTYFIKATOR</label>
+                <div style="font-size: 18px; font-weight: 600;">{{ current_user.username }}</div>
+            </div>
+            <div>
+                <label>POZIOM UPRAWNIEŃ</label>
+                <div class="badge-success badge">{{ current_user.role | upper }}</div>
+            </div>
+        </div>
+        
+        <form method="POST" action="{{ url_for('profile') }}">
+            <input type="hidden" name="action" value="update_email">
+            <div class="form-group">
+                <label for="email">Adres Email (wymagany do resetowania hasła)</label>
+                <input type="email" id="email" name="email" value="{{ email or '' }}" required placeholder="np. jan@technologie.pl">
+            </div>
+            <button type="submit" class="btn btn-secondary">Zaktualizuj profil</button>
+        </form>
+    </div>
+    
+    <div class="glass-panel animate-fade-up" style="animation-delay: 0.2s;">
+        <h3 style="color: white; margin-bottom: 24px;">Bezpieczeństwo</h3>
+        <form method="POST" action="{{ url_for('profile') }}">
+            <input type="hidden" name="action" value="change_password">
+            
+            <div class="form-group">
+                <label for="current_password">Obecne Hasło</label>
+                <input type="password" id="current_password" name="current_password" required>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                <div class="form-group">
+                    <label for="new_password">Nowe Hasło</label>
+                    <input type="password" id="new_password" name="new_password" required minlength="8">
+                </div>
+                <div class="form-group">
+                    <label for="confirm_password">Potwierdź Nowe Hasło</label>
+                    <input type="password" id="confirm_password" name="confirm_password" required minlength="8">
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary">Zmień hasło i wyloguj inne sesje</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

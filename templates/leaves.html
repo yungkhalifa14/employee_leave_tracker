@@ -11,10 +11,10 @@
         <h3>Zaplanuj Urlop</h3>
         <form method="POST" action="{{ url_for('leaves') }}">
             <div class="form-group">
-                <label for="employee_id">Pracownik</label>
-                <select id="employee_id" name="employee_id" required>
+                <label for="user_id">Pracownik</label>
+                <select id="user_id" name="user_id" required>
                     {% for emp in employees %}
-                        <option value="{{ emp[0] }}">{{ emp[1] }}</option>
+                        <option value="{{ emp[0] }}" {% if current_user.id|string == emp[0]|string %}selected{% endif %}>{{ emp[1] }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -52,24 +52,35 @@
         <table>
             <thead>
                 <tr>
-                    <th>ID</th>
                     <th>Pracownik</th>
-                    <th>Od</th>
-                    <th>Do</th>
+                    <th>Od &rarr; Do</th>
                     <th>Rodzaj</th>
+                    <th>Status</th>
                     <th>Akcje</th>
                 </tr>
             </thead>
             <tbody>
                 {% for leave in leaves %}
                 <tr>
-                    <td><span class="badge">{{ leave[0] }}</span></td>
                     <td><strong>{{ leave[1] }}</strong></td>
-                    <td style="font-family: inherit; color: var(--text-secondary);">{{ leave[2] }}</td>
-                    <td style="font-family: inherit; color: var(--text-secondary);">{{ leave[3] }}</td>
+                    <td style="color: var(--text-secondary);">
+                        {{ leave[2] }} &rarr; {{ leave[3] }}
+                    </td>
                     <td>{{ leave[4] }}</td>
+                    <td>
+                        <span class="badge {{ leave[5] }}">
+                            {% if leave[5] == 'pending' %}Oczekuje{% elif leave[5] == 'approved' %}Zatwierdzony{% else %}Odrzucony{% endif %}
+                        </span>
+                        {% if leave[6] %}
+                        <div style="font-size: 0.75rem; color: var(--danger); margin-top: 4px;">
+                            {{ leave[6] }}
+                        </div>
+                        {% endif %}
+                    </td>
                     <td class="action-btns">
+                        {% if leave[5] == 'pending' or current_user.role == 'admin' %}
                         <a href="{{ url_for('edit_leave', leave_id=leave[0]) }}" class="btn-sm btn-edit">Edytuj</a>
+                        {% endif %}
                         <form action="{{ url_for('delete_leave', leave_id=leave[0]) }}" method="POST" style="display:inline;" onsubmit="return confirm('Czy na pewno chcesz usunąć ten wpis o urlopie?');">
                             <button type="submit" class="btn-sm btn-delete">Usuń</button>
                         </form>

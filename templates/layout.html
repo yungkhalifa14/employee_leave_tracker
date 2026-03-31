@@ -1,74 +1,75 @@
 <!DOCTYPE html>
 <html lang="pl">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Monitor Urlopów</title>
+    <title>TimeFlow | PTO Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
-
 <body>
-    {% if current_user.is_authenticated %}
-    <nav class="navbar">
-        <a href="{{ url_for('dashboard') }}" class="nav-brand">Monitor Urlopów</a>
-        
-        <div class="nav-links">
-            <a href="{{ url_for('dashboard') }}">Zestawienie</a>
-            <a href="{{ url_for('leaves') }}">Urlopy</a>
-            {% if current_user.role == 'admin' %}
-            <a href="{{ url_for('employees') }}">Pracownicy</a>
-            <a href="{{ url_for('teams_view') }}">Zespoły</a>
-            <a href="{{ url_for('holidays') }}">Święta</a>
-            {% endif %}
+    <div class="app-layout">
+        {% if current_user.is_authenticated %}
+        <aside class="sidebar">
+            <a href="{{ url_for('dashboard') }}" class="brand">
+                <div class="brand-dot"></div>
+                TimeFlow
+            </a>
             
-            <div class="nav-user">
-                {% if current_user.role == 'admin' %}
-                <div class="notifications-dropdown">
-                    <button class="btn-icon" style="position: relative;">
-                        🔔
-                        {% if pending_leaves_count > 0 %}
-                        <span class="badge-count">{{ pending_leaves_count }}</span>
-                        {% endif %}
-                    </button>
-                    <div class="dropdown-menu">
-                        <div class="dropdown-header">Oczekujące Wnioski ({{ pending_leaves_count }})</div>
-                        {% if pending_leaves_count > 0 %}
-                            {% for req in pending_leaves %}
-                            <div class="dropdown-item">
-                                <strong>{{ req[1] }}</strong><br>
-                                <small style="color: var(--text-secondary);">{{ req[2] }} &rarr; {{ req[3] }}</small>
-                            </div>
-                            {% endfor %}
-                            <a href="{{ url_for('dashboard') }}" class="dropdown-footer">Sprawdź na osi czasu</a>
-                        {% else %}
-                            <div class="dropdown-item">Brak nowych wniosków.</div>
-                        {% endif %}
+            <nav class="nav-links">
+                <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+                    Dashboard
+                </a>
+                <a href="{{ url_for('leaves') }}" class="nav-link {% if request.endpoint == 'leaves' %}active{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"></path></svg>
+                    Wniosek
+                </a>
+                {% if current_user.role in ['admin', 'manager'] %}
+                <a href="{{ url_for('employees') }}" class="nav-link {% if request.endpoint == 'employees' %}active{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                    Pracownicy
+                </a>
+                <a href="{{ url_for('teams_view') }}" class="nav-link {% if request.endpoint == 'teams_view' %}active{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+                    Zespoły
+                </a>
+                {% endif %}
+                <a href="{{ url_for('profile') }}" class="nav-link {% if request.endpoint == 'profile' %}active{% endif %}">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    Profil
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="user-snippet">
+                    <div class="avatar">{{ current_user.name[:1] }}</div>
+                    <div style="flex: 1; overflow: hidden;">
+                        <div style="font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ current_user.name }}</div>
+                        <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">{{ current_user.role }}</div>
                     </div>
                 </div>
-                {% endif %}
-                <span class="user-badge">{{ current_user.name }} ({{ current_user.role }})</span>
-                <a href="{{ url_for('logout') }}" class="btn-sm btn-logout">Wyloguj</a>
+                <a href="{{ url_for('logout') }}" class="nav-link" style="margin-top: 16px; color: var(--danger);">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                    Wyloguj
+                </a>
             </div>
-        </div>
-    </nav>
-    {% endif %}
-
-    <div class="main-content">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        <div class="flashes">
-            {% for category, message in messages %}
-            <div class="alert {{ category }}">
-                {{ message }}
-            </div>
-            {% endfor %}
-        </div>
+        </aside>
         {% endif %}
-        {% endwith %}
 
-        {% block content %}{% endblock %}
+        <main class="main-content" {% if not current_user.is_authenticated %}style="margin-left: 0;"{% endif %}>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert {{ category }}">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+
+            {% block content %}{% endblock %}
+        </main>
     </div>
 </body>
-
 </html>
