@@ -1,0 +1,75 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="page-header animate-fade-up">
+    <div>
+        <h1>Zarządzanie Zespołami</h1>
+        <p>Generuj linki do samo-rejestracji dla swoich pracowników</p>
+    </div>
+</div>
+
+<div class="glass-panel animate-fade-up" style="margin-bottom: 32px; animation-delay: 0.1s;">
+    <h3 style="margin-bottom: 24px; color: white;">Utwórz Nowy Zespół</h3>
+    <form method="POST" action="{{ url_for('teams_view') }}" style="display: flex; gap: 16px; align-items: flex-end;">
+        <div class="form-group" style="flex: 1; margin: 0;">
+            <label for="name">Nazwa Zespołu</label>
+            <input type="text" id="name" name="name" required placeholder="np. Frontend Team">
+        </div>
+        <button type="submit" class="btn btn-primary" style="height: 48px; padding: 0 24px; align-self: flex-end; margin-bottom: 1px;">Dodaj Zespół</button>
+    </form>
+</div>
+
+<div class="glass-panel animate-fade-up" style="animation-delay: 0.2s;">
+    <h3 style="margin-bottom: 32px; color: white;">Twoje Zespoły i Linki do rejestracji</h3>
+    
+    {% if teams %}
+    <div class="table-panel">
+        <table class="modern-table">
+            <thead>
+                <tr>
+                    <th>NAZWA ZESPOŁU</th>
+                    <th>LINK DO REJESTRACJI</th>
+                    <th>AKCJE</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for team in teams %}
+                <tr>
+                    <td style="font-weight: 700;">{{ team[1] }}</td>
+                    <td>
+                        <div style="display: flex; gap: 12px; align-items: center;">
+                            <code style="background: rgba(0,0,0,0.4); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); font-size: 13px; color: var(--accent);">
+                                {{ url_for('join_team', token=team[2], _external=True) }}
+                            </code>
+                            <button class="btn-sm btn-edit" onclick="copyJoinLink(this, '{{ url_for('join_team', token=team[2], _external=True) }}')">Kopiuj</button>
+                        </div>
+                    </td>
+                    <td>
+                        <form action="{{ url_for('regenerate_team_token', team_id=team[0]) }}" method="POST" onsubmit="return confirm('Generowanie nowego tokenu spowoduje wygaśnięcie starego. Kontynuować?');">
+                            <button type="submit" class="btn-sm btn-delete" style="color: var(--warning); background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.2);">
+                                Regeneruj Token
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="color: var(--text-muted);">Nie zarządzasz jeszcze żadnym zespołem.</p>
+    {% endif %}
+</div>
+
+<script>
+function copyJoinLink(btn, url) {
+    navigator.clipboard.writeText(url).then(() => {
+        const originalText = btn.textContent;
+        btn.textContent = "Skopiowano!";
+        setTimeout(() => btn.textContent = originalText, 2000);
+    }).catch(err => {
+        console.error('Failed to copy: ', err);
+    });
+}
+</script>
+{% endblock %}

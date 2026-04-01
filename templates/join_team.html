@@ -1,0 +1,47 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="card auth-card">
+        <div class="auth-header">
+            <div class="logo-icon">🐘</div>
+            <h2>Dołącz do Zespołu: {{ team_name }}</h2>
+            <p>Utwórz swoje konto pracownicze</p>
+        </div>
+        
+        <form method="POST">
+            <div class="form-group">
+                <label for="name">Imię i Nazwisko</label>
+                <input type="text" id="name" name="name" required placeholder="np. Jan Kowalski">
+            </div>
+
+            <div class="form-group">
+                <label for="username">Nazwa użytkownika</label>
+                <input type="text" id="username" name="username" required placeholder="Wybierz login">
+            </div>
+
+            <div class="form-group">
+                <label for="email">E-mail</label>
+                <input type="email" id="email" name="email" required placeholder="Twój adres e-mail">
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="password">Hasło</label>
+                    <input type="password" id="password" name="password" required>
+                </div>
+                <div class="form-group">
+                    <label for="confirm_password">Potwierdź hasło</label>
+                    <input type="password" id="confirm_password" name="confirm_password" required>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">Stwórz Konto i Dołącz</button>
+        </form>
+        
+        <div class="auth-footer">
+            <p>Masz już konto? <a href="{{ url_for('login') }}">Zaloguj się</a></p>
+        </div>
+    </div>
+</div>
+{% endblock %}

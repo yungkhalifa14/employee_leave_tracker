@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: employee-leave-tracker
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn webapp:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: DATABASE_PATH
+        value: /data/leave_tracker.db
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FLASK_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    disk:
+      name: sqlite-data
+      mountPath: /data
+      sizeGB: 1

@@ -1,59 +1,103 @@
 import sqlite3
 import os
 
-# Store DB in user's home folder to avoid permission issues when frozen
-DB_FILE = os.path.join(os.path.expanduser('~'), 'leave_tracker.db')
+# Database Path — on Render this is /data/leave_tracker.db (persistent disk)
+DB_PATH = os.environ.get('DATABASE_PATH', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'leave_tracker.db'))
 
 def get_connection():
-    conn = sqlite3.connect(DB_FILE)
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 def init_db():
     conn = get_connection()
     cursor = conn.cursor()
-    
-    # Create employees table
+
+    # Users table — covers all roles: admin, manager, employee
     cursor.execute('''
-        CREATE TABLE IF NOT EXISTS employees (
+        CREATE TABLE IF NOT EXISTS users (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
-            leave_limit INTEGER DEFAULT 26
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'employee',
+            leave_limit INTEGER DEFAULT 26,
+            team_id INTEGER,
+            email TEXT UNIQUE,
+            reset_token TEXT,
+            reset_token_expiry TIMESTAMP,
+            FOREIGN KEY (team_id) REFERENCES teams (id)
+        );
+    ''')
+
+    # Teams table — created by managers
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS teams (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            manager_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+            join_token TEXT UNIQUE
         )
     ''')
-    
-    # Create holidays table
-    # Using date string YYYY-MM-DD
+
+    # Public holidays
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS holidays (
             date TEXT PRIMARY KEY,
             name TEXT NOT NULL
         )
     ''')
-    
-    # Create leaves table
-    # storing dates as YYYY-MM-DD strings
+
+    # Leave requests — submitted by employees
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS leaves (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            employee_id INTEGER,
+            user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
             start_date TEXT NOT NULL,
             end_date TEXT NOT NULL,
             reason TEXT,
-            FOREIGN KEY (employee_id) REFERENCES employees (id)
+            status TEXT NOT NULL DEFAULT 'pending',  -- pending | approved | declined
+            manager_comment TEXT
         )
     ''')
+
+    conn.commit()
+    conn.close()
+    migrate_db()
+
+def migrate_db():
+    conn = get_connection()
+    cursor = conn.cursor()
+    # Add columns if they don't exist
+    columns = [
+        ('email', 'TEXT'),
+        ('reset_token', 'TEXT'),
+        ('reset_token_expiry', 'TIMESTAMP')
+    ]
+    for col_name, col_type in columns:
+        try:
+            cursor.execute(f'ALTER TABLE users ADD COLUMN {col_name} {col_type}')
+        except sqlite3.OperationalError:
+            pass # Already exists
+            
+    # Add join_token to teams
+    try:
+        cursor.execute('ALTER TABLE teams ADD COLUMN join_token TEXT')
+    except sqlite3.OperationalError:
+        pass
+    
+    # Fill existing teams with tokens if they are null
+    import secrets
+    cursor.execute('SELECT id FROM teams WHERE join_token IS NULL')
+    teams_without_tokens = cursor.fetchall()
+    for (tid,) in teams_without_tokens:
+        token = secrets.token_urlsafe(16)
+        cursor.execute('UPDATE teams SET join_token = ? WHERE id = ?', (token, tid))
     
     conn.commit()
-    
-    # Auto-migration: check if leave_limit column exists
-    cursor.execute("PRAGMA table_info(employees)")
-    columns = [info[1] for info in cursor.fetchall()]
-    if 'leave_limit' not in columns:
-        cursor.execute("ALTER TABLE employees ADD COLUMN leave_limit INTEGER DEFAULT 26")
-        conn.commit()
-    
     conn.close()
 
 if __name__ == '__main__':
     init_db()
-    print("Database initialized.")
+    print(f"Database initialised at {DB_PATH}")

@@ -1,36 +1,54 @@
 {% extends "layout.html" %}
 
 {% block content %}
-<h2>Święta</h2>
+<div class="dashboard-header">
+    <h2>Zarządzanie Świętami</h2>
+</div>
 
-<div class="card-container">
-    <div class="card add-form">
-        <h3>Dodaj Nowe Święto</h3>
-        <form method="post">
+<div class="card-container" style="align-items: flex-start;">
+    <!-- Add Holiday Form -->
+    {% if current_user.role == 'admin' %}
+    <div class="card">
+        <h3>Dodaj Święto</h3>
+        <form method="POST" action="{{ url_for('holidays') }}">
+            <div class="form-group">
+                <label for="name">Nazwa Święta</label>
+                <input type="text" id="name" name="name" required placeholder="np. Boże Narodzenie">
+            </div>
+            
             <div class="form-group">
                 <label for="date">Data</label>
                 <input type="date" id="date" name="date" required>
             </div>
-            <div class="form-group">
-                <label for="name">Nazwa Święta</label>
-                <input type="text" id="name" name="name" required placeholder="np. Nowy Rok">
-            </div>
-            <button type="submit" class="btn-primary">Dodaj Święto</button>
+            
+            <button type="submit" class="btn btn-primary">Zapisz Święto</button>
         </form>
     </div>
+    {% endif %}
 
-    <div class="card list-view">
-        <h3>Nadchodzące Święta</h3>
-        <ul class="clean-list">
-            {% for date, name in holidays %}
-            <li>
-                <span class="date-badge">{{ date }}</span>
-                {{ name }}
-            </li>
-            {% else %}
-            <p>Brak zarejestrowanych świąt.</p>
-            {% endfor %}
-        </ul>
+    <!-- Holidays List -->
+    <div class="card" style="flex: 2;">
+        <h3>Lista Zapisanych Świąt</h3>
+        {% if holidays %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Nazwa Święta</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for hol in holidays %}
+                <tr>
+                    <td style="font-family: monospace; font-size: 15px; color: var(--accent);">{{ hol[0] }}</td>
+                    <td><strong>{{ hol[1] }}</strong></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p style="color: var(--text-secondary); padding: 20px 0;">Brak świąt w bazie danych.</p>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

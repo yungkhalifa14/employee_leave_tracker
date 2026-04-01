@@ -1,1 +1,6 @@
 flask
+flask-login
+flask-mail
+werkzeug
+gunicorn
+python-dotenv
