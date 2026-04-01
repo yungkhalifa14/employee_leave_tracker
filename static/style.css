@@ -52,6 +52,42 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: var(--border-bright); }
 
 /* Layout Structure */
+.impersonation-banner {
+    background: var(--warning);
+    color: #000;
+    padding: 12px 24px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 2000;
+    display: flex;
+    justify-content: center;
+    box-shadow: 0 4px 15px rgba(245, 158, 11, 0.4);
+}
+.impersonation-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+}
+.impersonation-content strong {
+    font-weight: 800;
+}
+.impersonation-btn {
+    background: #000;
+    color: var(--warning);
+    border: none;
+    padding: 6px 12px;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    transition: var(--transition-fast);
+}
+.impersonation-btn:hover {
+    background: #333;
+}
 .app-layout {
     display: flex;
     min-height: 100vh;
