@@ -10,6 +10,17 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
+    {% if is_impersonating %}
+    <div class="impersonation-banner">
+        <div class="impersonation-content">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+            <span>Przeglądasz jako <strong>{{ current_user.name }}</strong> (admin: {{ impersonating_admin_name }})</span>
+            <form action="{{ url_for('stop_impersonate') }}" method="POST" style="display:inline; margin-left: 16px;">
+                <button type="submit" class="impersonation-btn">Powrót do Admina</button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
     <div class="app-layout">
         {% if current_user.is_authenticated %}
         <aside class="sidebar">

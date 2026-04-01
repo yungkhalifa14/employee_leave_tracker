@@ -27,6 +27,7 @@ def init_db():
             email TEXT UNIQUE,
             reset_token TEXT,
             reset_token_expiry TIMESTAMP,
+            invite_token TEXT,
             FOREIGN KEY (team_id) REFERENCES teams (id)
         );
     ''')
@@ -73,7 +74,8 @@ def migrate_db():
     columns = [
         ('email', 'TEXT'),
         ('reset_token', 'TEXT'),
-        ('reset_token_expiry', 'TIMESTAMP')
+        ('reset_token_expiry', 'TIMESTAMP'),
+        ('invite_token', 'TEXT'),
     ]
     for col_name, col_type in columns:
         try:
