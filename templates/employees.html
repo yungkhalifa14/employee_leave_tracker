@@ -83,11 +83,6 @@
                     </td>
                     <td>
                             <div class="action-btns">
-                                {% if current_user.role == 'admin' %}
-                                <form action="{{ url_for('impersonate_user', user_id=emp.id) }}" method="POST" style="display:inline;" onsubmit="return confirm('Przełączyć się na konto {{ emp.name }}?');">
-                                    <button type="submit" class="btn-sm btn-secondary" style="border-color: var(--warning); color: var(--warning);">Impersonate</button>
-                                </form>
-                                {% endif %}
                                 {% if current_user.role == 'admin' or current_user.id|string == emp.id|string %}
                                 <a href="{{ url_for('edit_employee', emp_id=emp.id) }}" class="btn-sm btn-edit">Edytuj</a>
                                 {% endif %}
