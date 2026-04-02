@@ -38,7 +38,7 @@
                 {% endif %}
             {% endwith %}
 
-            <form method="POST" action="{{ url_for('login') }}">
+            <form method="POST" action="{{ url_for('auth.login') }}">
                 <div class="form-group">
                     <label for="username">Nazwa użytkownika</label>
                     <input type="text" id="username" name="username" required autocomplete="username" autofocus>
@@ -46,7 +46,7 @@
                 <div class="form-group" style="position: relative;">
                     <label for="password">Hasło</label>
                     <input type="password" id="password" name="password" required autocomplete="current-password">
-                    <a href="{{ url_for('forgot_password') }}" style="position: absolute; right: 0; top: 0; font-size: 0.8rem; color: var(--text-secondary); text-decoration: none;">
+                    <a href="{{ url_for('auth.forgot_password') }}" style="position: absolute; right: 0; top: 0; font-size: 0.8rem; color: var(--text-secondary); text-decoration: none;">
                         Zapomniałeś?
                     </a>
                 </div>
@@ -54,11 +54,11 @@
             </form>
             
             <div style="margin-top: 24px; text-align: center; display: flex; flex-direction: column; gap: 8px;">
-                <a href="{{ url_for('forgot_password') }}" style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem;">
+                <a href="{{ url_for('auth.forgot_password') }}" style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem;">
                     Zapomniałeś hasła?
                 </a>
                 <span style="color: var(--text-secondary); font-size: 0.9rem;">
-                    Nie masz konta? <a href="{{ url_for('register') }}" style="color: var(--primary-color);">Zarejestruj się jako Manager</a>
+                    Nie masz konta? <a href="{{ url_for('auth.register') }}" style="color: var(--primary-color);">Zarejestruj się jako Manager</a>
                 </span>
             </div>
         </div>

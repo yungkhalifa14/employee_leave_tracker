@@ -10,7 +10,7 @@
     {% if current_user.role == 'admin' %}
     <div class="card">
         <h3>Dodaj Święto</h3>
-        <form method="POST" action="{{ url_for('holidays') }}">
+        <form method="POST" action="{{ url_for('management.holidays') }}">
             <div class="form-group">
                 <label for="name">Nazwa Święta</label>
                 <input type="text" id="name" name="name" required placeholder="np. Boże Narodzenie">

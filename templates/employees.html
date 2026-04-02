@@ -8,7 +8,7 @@
     </div>
 
     {% if current_user.role in ['admin', 'manager'] %}
-    <a href="{{ url_for('teams_view') }}" class="btn btn-primary">
+    <a href="{{ url_for('management.teams_view') }}" class="btn btn-primary">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
         </svg>
@@ -19,7 +19,7 @@
 
 <div class="glass-panel animate-fade-up" style="margin-bottom: 32px; animation-delay: 0.1s;">
     <h3 style="margin-bottom: 24px; color: white;">Zaproś Pracownika</h3>
-    <form method="POST" action="{{ url_for('employees') }}"
+    <form method="POST" action="{{ url_for('management.employees') }}"
         style="display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap;">
         <div class="form-group" style="flex: 1; min-width: 200px; margin: 0;">
             <label for="name">Imię i Nazwisko</label>
@@ -92,10 +92,10 @@
                     <td>
                         <div class="action-btns">
                             {% if current_user.role == 'admin' or current_user.id|string == emp.id|string %}
-                            <a href="{{ url_for('edit_employee', emp_id=emp.id) }}" class="btn-sm btn-edit">Edytuj</a>
+                            <a href="{{ url_for('management.edit_employee', emp_id=emp.id) }}" class="btn-sm btn-edit">Edytuj</a>
                             {% endif %}
                             {% if current_user.role == 'admin' %}
-                            <form action="{{ url_for('delete_employee', emp_id=emp.id) }}" method="POST"
+                            <form action="{{ url_for('management.delete_employee', emp_id=emp.id) }}" method="POST"
                                 style="display:inline;" onsubmit="return confirm('Usuń pracownika?');">
                                 <button type="submit" class="btn-sm btn-delete">Usuń</button>
                             </form>

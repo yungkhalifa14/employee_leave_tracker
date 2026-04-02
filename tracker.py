@@ -283,13 +283,13 @@ class LeaveTracker:
             # The prompt requested for 2026 and future years (let's say 5 years ahead)
             end_year = start_year + 5
 
-        pl_holidays = holidays.Poland(years=range(start_year, end_year + 1))
+        pl_holidays = holidays.Poland(years=range(start_year, end_year + 1), language='pl')
         
         conn = get_connection()
         cursor = conn.cursor()
         for dt, name in pl_holidays.items():
             date_str = dt.strftime('%Y-%m-%d')
-            cursor.execute('INSERT OR IGNORE INTO holidays (date, name) VALUES (?, ?)', (date_str, name))
+            cursor.execute('INSERT OR REPLACE INTO holidays (date, name) VALUES (?, ?)', (date_str, name))
         conn.commit()
         conn.close()
         return True

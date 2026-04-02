@@ -22,7 +22,7 @@
             </div>
         </div>
         
-        <form method="POST" action="{{ url_for('profile') }}">
+        <form method="POST" action="{{ url_for('management.profile') }}">
             <input type="hidden" name="action" value="update_email">
             <div class="form-group">
                 <label for="email">Adres Email (wymagany do resetowania hasła)</label>
@@ -34,7 +34,7 @@
     
     <div class="glass-panel animate-fade-up" style="animation-delay: 0.2s;">
         <h3 style="color: white; margin-bottom: 24px;">Bezpieczeństwo</h3>
-        <form method="POST" action="{{ url_for('profile') }}">
+        <form method="POST" action="{{ url_for('management.profile') }}">
             <input type="hidden" name="action" value="change_password">
             
             <div class="form-group">

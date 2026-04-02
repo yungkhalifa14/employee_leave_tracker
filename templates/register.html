@@ -28,7 +28,7 @@
                 {% endif %}
             {% endwith %}
 
-            <form method="POST" action="{{ url_for('register') }}">
+            <form method="POST" action="{{ url_for('auth.register') }}">
                 <div class="form-group">
                     <label for="name">Imię i nazwisko</label>
                     <input type="text" id="name" name="name" required placeholder="np. Jan Kowalski">
@@ -54,7 +54,7 @@
             </form>
             
             <div class="auth-footer">
-                Masz już konto? <a href="{{ url_for('login') }}">Zaloguj się</a>
+                Masz już konto? <a href="{{ url_for('auth.login') }}">Zaloguj się</a>
             </div>
         </div>
     </div>

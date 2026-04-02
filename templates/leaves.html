@@ -9,7 +9,7 @@
     <!-- Add Leave Form -->
     <div class="card">
         <h3>Zaplanuj Urlop</h3>
-        <form method="POST" action="{{ url_for('leaves') }}">
+        <form method="POST" action="{{ url_for('dashboard.leaves') }}">
             <div class="form-group">
                 <label for="user_id">Pracownik</label>
                 <select id="user_id" name="user_id" required>
@@ -79,9 +79,9 @@
                     </td>
                     <td class="action-btns">
                         {% if leave[5] == 'pending' or current_user.role == 'admin' %}
-                        <a href="{{ url_for('edit_leave', leave_id=leave[0]) }}" class="btn-sm btn-edit">Edytuj</a>
+                        <a href="{{ url_for('dashboard.edit_leave', leave_id=leave[0]) }}" class="btn-sm btn-edit">Edytuj</a>
                         {% endif %}
-                        <form action="{{ url_for('delete_leave', leave_id=leave[0]) }}" method="POST" style="display:inline;" onsubmit="return confirm('Czy na pewno chcesz usunąć ten wpis o urlopie?');">
+                        <form action="{{ url_for('dashboard.delete_leave', leave_id=leave[0]) }}" method="POST" style="display:inline;" onsubmit="return confirm('Czy na pewno chcesz usunąć ten wpis o urlopie?');">
                             <button type="submit" class="btn-sm btn-delete">Usuń</button>
                         </form>
                     </td>

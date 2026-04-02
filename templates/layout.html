@@ -13,31 +13,31 @@
     <div class="app-layout">
         {% if current_user.is_authenticated %}
         <aside class="sidebar">
-            <a href="{{ url_for('dashboard') }}" class="brand">
+            <a href="{{ url_for('dashboard.dashboard') }}" class="brand">
                 <div class="brand-dot"></div>
                 TimeFlow
             </a>
             
             <nav class="nav-links">
-                <a href="{{ url_for('dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+                <a href="{{ url_for('dashboard.dashboard') }}" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                     Dashboard
                 </a>
-                <a href="{{ url_for('leaves') }}" class="nav-link {% if request.endpoint == 'leaves' %}active{% endif %}">
+                <a href="{{ url_for('dashboard.leaves') }}" class="nav-link {% if request.endpoint == 'leaves' %}active{% endif %}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"></path></svg>
                     Wniosek
                 </a>
                 {% if current_user.role in ['admin', 'manager'] %}
-                <a href="{{ url_for('employees') }}" class="nav-link {% if request.endpoint == 'employees' %}active{% endif %}">
+                <a href="{{ url_for('management.employees') }}" class="nav-link {% if request.endpoint == 'employees' %}active{% endif %}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
                     Pracownicy
                 </a>
-                <a href="{{ url_for('teams_view') }}" class="nav-link {% if request.endpoint == 'teams_view' %}active{% endif %}">
+                <a href="{{ url_for('management.teams_view') }}" class="nav-link {% if request.endpoint == 'teams_view' %}active{% endif %}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
                     Zespoły
                 </a>
                 {% endif %}
-                <a href="{{ url_for('profile') }}" class="nav-link {% if request.endpoint == 'profile' %}active{% endif %}">
+                <a href="{{ url_for('management.profile') }}" class="nav-link {% if request.endpoint == 'profile' %}active{% endif %}">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                     Profil
                 </a>
@@ -51,7 +51,7 @@
                         <div style="font-size: 11px; color: var(--text-secondary); text-transform: uppercase;">{{ current_user.role }}</div>
                     </div>
                 </div>
-                <a href="{{ url_for('logout') }}" class="nav-link" style="margin-top: 16px; color: var(--danger);">
+                <a href="{{ url_for('auth.logout') }}" class="nav-link" style="margin-top: 16px; color: var(--danger);">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                     Wyloguj
                 </a>

@@ -10,7 +10,7 @@
 
 <div class="glass-panel animate-fade-up" style="margin-bottom: 32px; animation-delay: 0.1s;">
     <h3 style="margin-bottom: 24px; color: white;">Utwórz Nowy Zespół</h3>
-    <form method="POST" action="{{ url_for('teams_view') }}" style="display: flex; gap: 16px; align-items: flex-end;">
+    <form method="POST" action="{{ url_for('management.teams_view') }}" style="display: flex; gap: 16px; align-items: flex-end;">
         <div class="form-group" style="flex: 1; margin: 0;">
             <label for="name">Nazwa Zespołu</label>
             <input type="text" id="name" name="name" required placeholder="np. Frontend Team">
@@ -45,7 +45,7 @@
                         </div>
                     </td>
                     <td>
-                        <form action="{{ url_for('regenerate_team_token', team_id=team[0]) }}" method="POST" onsubmit="return confirm('Generowanie nowego tokenu spowoduje wygaśnięcie starego. Kontynuować?');">
+                        <form action="{{ url_for('management.regenerate_team_token', team_id=team[0]) }}" method="POST" onsubmit="return confirm('Generowanie nowego tokenu spowoduje wygaśnięcie starego. Kontynuować?');">
                             <button type="submit" class="btn-sm btn-delete" style="color: var(--warning); background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.2);">
                                 Regeneruj Token
                             </button>
