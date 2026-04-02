@@ -72,7 +72,7 @@
                     </td>
                     <td><span class="badge {% if emp.role == 'admin' %}admin{% else %}user{% endif %}">{{ emp.role
                             }}</span></td>
-                    <td>{{ emp.team_name }}</td>
+                    <td>{{ emp.team }}</td>
                     <td>{{ emp.leave_limit }} DNI</td>
                     <td class="{% if emp.remaining_days < 0 %}negative{% endif %}" style="font-weight: 700;">
                         {{ emp.remaining_days }} DNI
@@ -83,7 +83,7 @@
                             <span class="badge"
                                 style="background: rgba(245,158,11,0.1); color: #fcd34d;">Aktywacja...</span>
                             <button class="btn-sm btn-secondary" style="padding: 4px 8px;"
-                                onclick="copyInvite('{{ url_for('invite', token=emp.invite_token, _external=True) }}')">Copy</button>
+                                onclick="copyInvite('{{ url_for('auth.invite', token=emp.invite_token, _external=True) }}')">Copy</button>
                         </div>
                         {% else %}
                         <span class="badge-success badge">Aktywny</span>

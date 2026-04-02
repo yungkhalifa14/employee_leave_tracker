@@ -39,9 +39,9 @@
                     <td>
                         <div style="display: flex; gap: 12px; align-items: center;">
                             <code style="background: rgba(0,0,0,0.4); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); font-size: 13px; color: var(--accent);">
-                                {{ url_for('join_team', token=team[2], _external=True) }}
+                                {{ url_for('auth.join_team', token=team[2], _external=True) }}
                             </code>
-                            <button class="btn-sm btn-edit" onclick="copyJoinLink(this, '{{ url_for('join_team', token=team[2], _external=True) }}')">Kopiuj</button>
+                            <button class="btn-sm btn-edit" onclick="copyJoinLink(this, '{{ url_for('auth.join_team', token=team[2], _external=True) }}')">Kopiuj</button>
                         </div>
                     </td>
                     <td>

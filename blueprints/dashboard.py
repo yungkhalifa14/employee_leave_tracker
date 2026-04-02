@@ -121,8 +121,8 @@ def dashboard():
         user_balance = next((u for u in tracker.get_users_with_balance() if u['id'] == current_user.id), None)
         pending_count = len([l for l in tracker.get_all_leaves(user_id=current_user.id) if l[5] == 'pending'])
         stats = {
-            'used': user_balance['used'] if user_balance else 0,
-            'remaining': user_balance['remaining'] if user_balance else 0,
+            'used': user_balance['used_days'] if user_balance else 0,
+            'remaining': user_balance['remaining_days'] if user_balance else 0,
             'pending': pending_count
         }
         
