@@ -46,6 +46,7 @@ login_manager.login_view = 'login'
 tracker = LeaveTracker()
 # Ensure DB is ready
 init_db()
+tracker.prefill_polish_holidays()
 
 POLISH_MONTHS = {
     1: "Styczeń", 2: "Luty", 3: "Marzec", 4: "Kwiecień",
