@@ -41,7 +41,9 @@
                             <code style="background: rgba(0,0,0,0.4); padding: 8px 12px; border-radius: 6px; border: 1px solid var(--border); font-size: 13px; color: var(--accent);">
                                 {{ url_for('auth.join_team', token=team[2], _external=True) }}
                             </code>
-                            <button class="btn-sm btn-edit" onclick="copyJoinLink(this, '{{ url_for('auth.join_team', token=team[2], _external=True) }}')">Kopiuj</button>
+                            <button class="btn-sm btn-edit" 
+                                    data-url="{{ url_for('auth.join_team', token=team[3], _external=True) }}"
+                                    onclick="copyJoinLink(this, this.dataset.url)">Kopiuj</button>
                         </div>
                     </td>
                     <td>

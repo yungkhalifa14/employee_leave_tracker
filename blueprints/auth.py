@@ -174,11 +174,11 @@ def invite(token):
         
         if not all([username, email, password, confirm_pw]):
             flash("Wszystkie pola są wymagane.", "error")
-            return render_template('invite.html', token=token, name=user[1])
+            return render_template('invite.html', token=token, employee=user)
             
         if password != confirm_pw:
             flash("Hasła nie są identyczne.", "error")
-            return render_template('invite.html', token=token, name=user[1])
+            return render_template('invite.html', token=token, employee=user)
             
         pw_hash = generate_password_hash(password)
         if tracker.claim_invite(token, username, pw_hash, email=email):
@@ -188,4 +188,4 @@ def invite(token):
         else:
             flash("Wystąpił błąd lub nazwa użytkownika jest zajęta.", "error")
             
-    return render_template('invite.html', token=token, name=user[1])
+    return render_template('invite.html', token=token, employee=user)

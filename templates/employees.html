@@ -83,7 +83,8 @@
                             <span class="badge"
                                 style="background: rgba(245,158,11,0.1); color: #fcd34d;">Aktywacja...</span>
                             <button class="btn-sm btn-secondary" style="padding: 4px 8px;"
-                                onclick="copyInvite('{{ url_for('auth.invite', token=emp.invite_token, _external=True) }}')">Copy</button>
+                                data-url="{{ url_for('auth.invite', token=emp.invite_token, _external=True) }}"
+                                onclick="copyInvite(this.dataset.url)">Copy</button>
                         </div>
                         {% else %}
                         <span class="badge-success badge">Aktywny</span>
