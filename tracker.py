@@ -271,6 +271,29 @@ class LeaveTracker:
         conn.commit()
         conn.close()
 
+    def prefill_polish_holidays(self, start_year=None, end_year=None):
+        try:
+            import holidays
+        except ImportError:
+            return False
+
+        if start_year is None:
+            start_year = datetime.now().year
+        if end_year is None:
+            # The prompt requested for 2026 and future years (let's say 5 years ahead)
+            end_year = start_year + 5
+
+        pl_holidays = holidays.Poland(years=range(start_year, end_year + 1))
+        
+        conn = get_connection()
+        cursor = conn.cursor()
+        for dt, name in pl_holidays.items():
+            date_str = dt.strftime('%Y-%m-%d')
+            cursor.execute('INSERT OR IGNORE INTO holidays (date, name) VALUES (?, ?)', (date_str, name))
+        conn.commit()
+        conn.close()
+        return True
+
     def update_user_password(self, user_id, hashed_pw):
         conn = get_connection()
         cursor = conn.cursor()

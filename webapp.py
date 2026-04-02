@@ -176,6 +176,7 @@ def register():
             
         hashed_pw = generate_password_hash(password)
         if tracker.add_user(name, username, hashed_pw, role='manager', email=email):
+            tracker.prefill_polish_holidays()
             flash("Konto managera utworzone pomyślnie!", "success")
             # Auto-login
             user = tracker.get_user_by_username(username)
@@ -222,6 +223,7 @@ def join_team(token):
             
         pw_hash = generate_password_hash(password)
         if tracker.add_user(name, username, pw_hash, role='employee', team_id=team_id, email=email):
+            tracker.prefill_polish_holidays()
             flash(f"Witaj w zespole {team_name}! Twoje konto zostało utworzone.", 'success')
             user = tracker.get_user_by_username(username)
             if user:
@@ -261,6 +263,7 @@ def invite(token):
             
         pw_hash = generate_password_hash(password)
         if tracker.claim_invite(token, username, pw_hash, email=email):
+            tracker.prefill_polish_holidays()
             flash("Konto zostało aktywowane!", 'success')
             return redirect(url_for('login'))
         else:

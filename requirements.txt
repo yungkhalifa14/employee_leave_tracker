@@ -4,3 +4,4 @@ flask-mail
 werkzeug
 gunicorn
 python-dotenv
+holidays
